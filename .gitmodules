@@ -1,0 +1,9 @@
+[submodule "rdd"]
+	path = rdd
+	url = https://github.com/xtcpete/rdd.git
+[submodule "LiftFeat"]
+	path = LiftFeat
+	url = https://github.com/lyp-deeplearning/LiftFeat.git
+[submodule "EfficientLoFTR"]
+	path = EfficientLoFTR
+	url = https://github.com/zju3dv/EfficientLoFTR.git
