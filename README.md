@@ -10,7 +10,10 @@ Tested feature matching NN:
 
 ## Setup
 
-Clone this report with ```git clone --recurse-submodules [this repo]```
+Clone this report: ```git clone --recurse-submodules [this repo]```
+Apply patches: ```patch -p1 < patches/*.diff```
+Run setup (may take a while...): ````python3 setupEnv.py```
+
 
 ## References
 

@@ -6,6 +6,8 @@ from rdd.RDD.RDD import build
 from rdd.RDD.RDD_helper import RDD_helper
 from LiftFeat.models.liftfeat_wrapper import LiftFeat
 
+from utils.load_visibility import load_visibility 
+
 
 liftfeat_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'LiftFeat'))
 if liftfeat_path not in sys.path:
@@ -21,9 +23,21 @@ def setupLiftFeat():
     liftfeat = LiftFeat(detect_threshold=0.05)    
     return liftfeat
 
+
 if __name__ == '__main__':
+    # Load visibility map
+
+    vis_map = load_visibility('downloads/dante_dataset/dante_dataset/Visibility.txt')
+    # vis_map: {"photo_name": [ {"index": "1234", "w": "12.2", "h": "799.5" }, ...], ...}
+    # print(vis_map["_SAM1001.JPG"])
+    
+    # TODO: load images
 
     # Models instances
-    # RDD = setupRDD()
+    RDD = setupRDD()
     LF = setupLiftFeat()
+
+    # TODO: inference and filtering based on visibility map
+
+
 
