@@ -1,0 +1,57 @@
+Submodule LiftFeat contains modified content
+diff --git a/LiftFeat/models/__pycache__/interpolator.cpython-310.pyc b/LiftFeat/models/__pycache__/interpolator.cpython-310.pyc
+deleted file mode 100644
+index 4f15ec2..0000000
+Binary files a/LiftFeat/models/__pycache__/interpolator.cpython-310.pyc and /dev/null differ
+diff --git a/LiftFeat/models/__pycache__/interpolator.cpython-38.pyc b/LiftFeat/models/__pycache__/interpolator.cpython-38.pyc
+deleted file mode 100644
+index 5413c65..0000000
+Binary files a/LiftFeat/models/__pycache__/interpolator.cpython-38.pyc and /dev/null differ
+diff --git a/LiftFeat/models/__pycache__/liftfeat_wrapper.cpython-310.pyc b/LiftFeat/models/__pycache__/liftfeat_wrapper.cpython-310.pyc
+deleted file mode 100644
+index 229248b..0000000
+Binary files a/LiftFeat/models/__pycache__/liftfeat_wrapper.cpython-310.pyc and /dev/null differ
+diff --git a/LiftFeat/models/__pycache__/liftfeat_wrapper.cpython-38.pyc b/LiftFeat/models/__pycache__/liftfeat_wrapper.cpython-38.pyc
+deleted file mode 100644
+index e4b7e89..0000000
+Binary files a/LiftFeat/models/__pycache__/liftfeat_wrapper.cpython-38.pyc and /dev/null differ
+diff --git a/LiftFeat/models/__pycache__/model.cpython-310.pyc b/LiftFeat/models/__pycache__/model.cpython-310.pyc
+deleted file mode 100644
+index dd29b2d..0000000
+Binary files a/LiftFeat/models/__pycache__/model.cpython-310.pyc and /dev/null differ
+diff --git a/LiftFeat/models/__pycache__/model.cpython-38.pyc b/LiftFeat/models/__pycache__/model.cpython-38.pyc
+deleted file mode 100644
+index aab9117..0000000
+Binary files a/LiftFeat/models/__pycache__/model.cpython-38.pyc and /dev/null differ
+diff --git a/LiftFeat/models/liftfeat_wrapper.py b/LiftFeat/models/liftfeat_wrapper.py
+index a9c9dff..cddf790 100644
+--- a/LiftFeat/models/liftfeat_wrapper.py
++++ b/LiftFeat/models/liftfeat_wrapper.py
+@@ -5,9 +5,9 @@ import numpy as np
+ import math
+ import cv2
+ 
+-from models.model import LiftFeatSPModel
+-from models.interpolator import InterpolateSparse2d
+-from utils.config import featureboost_config
++from .model import LiftFeatSPModel
++from .interpolator import InterpolateSparse2d
++from ..utils.config import featureboost_config
+ 
+ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+ 
+diff --git a/LiftFeat/models/model.py b/LiftFeat/models/model.py
+index b2065ba..7f6517d 100644
+--- a/LiftFeat/models/model.py
++++ b/LiftFeat/models/model.py
+@@ -15,8 +15,8 @@ import cv2
+ 
+ import sys
+ sys.path.append('/home/yepeng_liu/code_python/laiwenpeng/LiftFeat')
+-from utils.featurebooster import FeatureBooster
+-from utils.config import featureboost_config
++from ..utils.featurebooster import FeatureBooster
++from ..utils.config import featureboost_config
+ 
+ # from models.model_dfb import LiftFeatModel
+ # from models.interpolator import InterpolateSparse2d
