@@ -1,28 +1,4 @@
 Submodule LiftFeat contains modified content
-diff --git a/LiftFeat/models/__pycache__/interpolator.cpython-310.pyc b/LiftFeat/models/__pycache__/interpolator.cpython-310.pyc
-deleted file mode 100644
-index 4f15ec2..0000000
-Binary files a/LiftFeat/models/__pycache__/interpolator.cpython-310.pyc and /dev/null differ
-diff --git a/LiftFeat/models/__pycache__/interpolator.cpython-38.pyc b/LiftFeat/models/__pycache__/interpolator.cpython-38.pyc
-deleted file mode 100644
-index 5413c65..0000000
-Binary files a/LiftFeat/models/__pycache__/interpolator.cpython-38.pyc and /dev/null differ
-diff --git a/LiftFeat/models/__pycache__/liftfeat_wrapper.cpython-310.pyc b/LiftFeat/models/__pycache__/liftfeat_wrapper.cpython-310.pyc
-deleted file mode 100644
-index 229248b..0000000
-Binary files a/LiftFeat/models/__pycache__/liftfeat_wrapper.cpython-310.pyc and /dev/null differ
-diff --git a/LiftFeat/models/__pycache__/liftfeat_wrapper.cpython-38.pyc b/LiftFeat/models/__pycache__/liftfeat_wrapper.cpython-38.pyc
-deleted file mode 100644
-index e4b7e89..0000000
-Binary files a/LiftFeat/models/__pycache__/liftfeat_wrapper.cpython-38.pyc and /dev/null differ
-diff --git a/LiftFeat/models/__pycache__/model.cpython-310.pyc b/LiftFeat/models/__pycache__/model.cpython-310.pyc
-deleted file mode 100644
-index dd29b2d..0000000
-Binary files a/LiftFeat/models/__pycache__/model.cpython-310.pyc and /dev/null differ
-diff --git a/LiftFeat/models/__pycache__/model.cpython-38.pyc b/LiftFeat/models/__pycache__/model.cpython-38.pyc
-deleted file mode 100644
-index aab9117..0000000
-Binary files a/LiftFeat/models/__pycache__/model.cpython-38.pyc and /dev/null differ
 diff --git a/LiftFeat/models/liftfeat_wrapper.py b/LiftFeat/models/liftfeat_wrapper.py
 index a9c9dff..cddf790 100644
 --- a/LiftFeat/models/liftfeat_wrapper.py
