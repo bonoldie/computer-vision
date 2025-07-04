@@ -10,6 +10,8 @@ Tested feature matching NN:
 
 ## Setup
 
+> To run torch on CPU run ```export CUDA_VISIBLE_DEVICES=""```
+
 Clone this report: ```git clone --recurse-submodules [this repo]```
 Apply patches: ```patch -p1 < patches/*.diff```
 Run setup (may take a while...): ````python3 setupEnv.py```

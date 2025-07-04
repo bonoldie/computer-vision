@@ -1,7 +1,9 @@
 import sys
 import os
+import gc
 
 import torch
+torch.device
 torch.cuda.empty_cache()
 
 from rdd.RDD.utils.misc import read_config
@@ -12,6 +14,7 @@ from mast3r.mast3r.model import AsymmetricMASt3R
 
 from mast3r.mast3r.fast_nn import fast_reciprocal_NNs
 from mast3r.dust3r.dust3r.inference import inference
+from mast3r.dust3r.dust3r.utils.image import load_images
 
 
 from utils.visibility import load_visibility, visualize_visibility
@@ -94,6 +97,7 @@ if __name__ == '__main__':
 
     Path(os.path.join(matches_savepath, 'RDD')).mkdir(parents=True, exist_ok=True)
     Path(os.path.join(matches_savepath, 'LiftFeat')).mkdir(parents=True, exist_ok=True)
+    Path(os.path.join(matches_savepath, 'Mast3r')).mkdir(parents=True, exist_ok=True)
 
     with torch.no_grad():
         # RDD.cpu()
@@ -101,11 +105,12 @@ if __name__ == '__main__':
         ############
         ## Mast3r ##
         ############
+        logger.info('Running inference on Mast3r...')
         
-        ref_Mast3r = cv2.resize(ref, (512,512))
-        target_Mast3r = cv2.resize(target, (512,512))
-
-        output = inference([tuple(ref_Mast3r, target_Mast3r)], Mast3r, 'cpu', batch_size=1, verbose=False)
+        images = load_images(['downloads/dante_dataset/dante_dataset/photos/_SAM1005.JPG', 'downloads/dante_dataset/dante_dataset/photos/_SAM1007.JPG'], size=512)
+        #ref_Mast3r, = cv2.resize(ref, (512,512))
+        #target_Mast3r = cv2.resize(target, (512,512))
+        output = inference([tuple(images)], Mast3r, 'cpu', batch_size=1, verbose=False)
 
         # at this stage, you have the raw dust3r predictions
         view1, pred1 = output['view1'], output['pred1']
@@ -128,7 +133,15 @@ if __name__ == '__main__':
         valid_matches = valid_matches_im0 & valid_matches_im1
         matches_im0, matches_im1 = matches_im0[valid_matches], matches_im1[valid_matches]
 
-        exit(0)
+        logger.log('SUCCESS' if len(matches_im0) > 0 else 'WARNING',f'Mast3r returned {len(matches_im0)} matches')
+    
+        np.save(os.path.join(matches_savepath, 'Mast3r', 'reference__SAM1005_matches'),np.asanyarray(matches_im0))
+        np.save(os.path.join(matches_savepath, 'Mast3r', 'target__SAM1007_matches'),np.asanyarray(matches_im1))
+
+        logger.success(f'Mast3r matches saved')
+
+        del images, output, view1, view2, pred1, pred2, desc1, desc2, matches_im0, matches_im1, valid_matches_im0, valid_matches_im1, valid_matches, Mast3r
+        gc.collect() 
 
         ######################
         ## LiftFeat section ##
@@ -136,10 +149,10 @@ if __name__ == '__main__':
         logger.info('Running inference on LiftFeat...')
 
         ref_H,ref_W = ref.shape[:2]
-        ref_LF = cv2.resize(ref, (round(ref_W/3),round(ref_H/3)))
+        ref_LF = cv2.resize(ref, (round(ref_W/5),round(ref_H/5)))
 
         target_H,target_W = ref.shape[:2]
-        target_LF = cv2.resize(ref, (round(target_W/3),round(target_H/3)))
+        target_LF = cv2.resize(ref, (round(target_W/5),round(target_H/5)))
 
         ref_matches, target_matches = LF.match_liftfeat(ref_LF, target_LF)
         

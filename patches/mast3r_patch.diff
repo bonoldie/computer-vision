@@ -1,0 +1,53 @@
+Submodule mast3r contains modified content
+diff --git a/mast3r/mast3r/catmlp_dpt_head.py b/mast3r/mast3r/catmlp_dpt_head.py
+index d6d40af..2add18d 100644
+--- a/mast3r/mast3r/catmlp_dpt_head.py
++++ b/mast3r/mast3r/catmlp_dpt_head.py
+@@ -8,7 +8,7 @@ import torch
+ import torch.nn as nn
+ import torch.nn.functional as F
+ 
+-import mast3r.utils.path_to_dust3r  # noqa
++from .utils.path_to_dust3r import HERE_PATH # noqa
+ from dust3r.heads.postprocess import reg_dense_depth, reg_dense_conf  # noqa
+ from dust3r.heads.dpt_head import PixelwiseTaskWithDPT  # noqa
+ import dust3r.utils.path_to_croco  # noqa
+diff --git a/mast3r/mast3r/fast_nn.py b/mast3r/mast3r/fast_nn.py
+index 05537f4..a587a24 100644
+--- a/mast3r/mast3r/fast_nn.py
++++ b/mast3r/mast3r/fast_nn.py
+@@ -9,8 +9,8 @@ import numpy as np
+ import math
+ from scipy.spatial import KDTree
+ 
+-import mast3r.utils.path_to_dust3r  # noqa
+-from dust3r.utils.device import to_numpy, todevice  # noqa
++from  .utils.path_to_dust3r import HERE_PATH # noqa
++from ..dust3r.dust3r.utils.device import to_numpy, todevice  # noqa
+ 
+ 
+ @torch.no_grad()
+diff --git a/mast3r/mast3r/model.py b/mast3r/mast3r/model.py
+index 6d7f621..28bbde1 100644
+--- a/mast3r/mast3r/model.py
++++ b/mast3r/mast3r/model.py
+@@ -8,15 +8,14 @@ import torch
+ import torch.nn.functional as F
+ import os
+ 
+-from mast3r.catmlp_dpt_head import mast3r_head_factory
++from .catmlp_dpt_head import mast3r_head_factory
+ 
+-import mast3r.utils.path_to_dust3r  # noqa
+-from dust3r.model import AsymmetricCroCo3DStereo  # noqa
+-from dust3r.utils.misc import transpose_to_landscape, is_symmetrized  # noqa
++from .utils.path_to_dust3r import HERE_PATH # noqa
++from ..dust3r.dust3r.model import AsymmetricCroCo3DStereo  # noqa
++from ..dust3r.dust3r.utils.misc import transpose_to_landscape, is_symmetrized  # noqa
+ 
+ inf = float('inf')
+ 
+-
+ def load_model(model_path, device, verbose=True):
+     if verbose:
+         print('... loading model from', model_path)
