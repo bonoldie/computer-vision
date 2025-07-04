@@ -11,11 +11,10 @@ from rdd.RDD.RDD import build
 from rdd.RDD.RDD_helper import RDD_helper
 from LiftFeat.models.liftfeat_wrapper import LiftFeat
 from mast3r.mast3r.model import AsymmetricMASt3R
-
 from mast3r.mast3r.fast_nn import fast_reciprocal_NNs
 from mast3r.dust3r.dust3r.inference import inference
 from mast3r.dust3r.dust3r.utils.image import load_images
-
+from RoMa.romatch import roma_outdoor
 
 from utils.visibility import load_visibility, visualize_visibility
 
@@ -54,6 +53,11 @@ def setupMaste3r():
     logger.info('Setting up Mast3r...')
     return AsymmetricMASt3R.from_pretrained('downloads/MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric.pth').to('cpu')
 
+
+def setupRoMa():
+    logger.info('Setting up RoMa(RoMa outdoor)...')
+    return roma_outdoor(device='cpu', coarse_res=1024, upsample_res=2048)
+
 def draw_matches(ref_points, dst_points, img0, img1):
     
     # Prepare keypoints and matches for drawMatches function
@@ -88,19 +92,46 @@ if __name__ == '__main__':
     ref = _SAM1005
     target = _SAM1007
 
+    ref_H,ref_W = ref.shape[:2]
+    target_H,target_W = ref.shape[:2]
+    
     # Models instances
     RDD = setupRDD()
     LF = setupLiftFeat()
     Mast3r = setupMaste3r()
+    RoMa = setupRoMa()
    
     logger.info(f'Matches save dir: {matches_savepath}')
 
     Path(os.path.join(matches_savepath, 'RDD')).mkdir(parents=True, exist_ok=True)
     Path(os.path.join(matches_savepath, 'LiftFeat')).mkdir(parents=True, exist_ok=True)
     Path(os.path.join(matches_savepath, 'Mast3r')).mkdir(parents=True, exist_ok=True)
+    Path(os.path.join(matches_savepath, 'RoMa')).mkdir(parents=True, exist_ok=True)
 
     with torch.no_grad():
         # RDD.cpu()
+
+        ##########
+        ## RoMa ##
+        ##########
+        logger.info('Running inference on RoMa...')
+        
+        warp, certainty = RoMa.match('downloads/dante_dataset/dante_dataset/photos/_SAM1005.JPG', 'downloads/dante_dataset/dante_dataset/photos/_SAM1007.JPG', device='cpu')
+        # Sample matches for estimation
+        matches, certainty = RoMa.sample(warp, certainty)
+        # Convert to pixel coordinates (RoMa produces matches in [-1,1]x[-1,1])
+        kptsA, kptsB = RoMa.to_pixel_coordinates(matches, ref_H, ref_W, target_H, target_W)
+
+
+
+        logger.log('SUCCESS' if len(kptsA) > 0 else 'WARNING',f'RoMa returned {len(kptsA)} matches')
+    
+        np.save(os.path.join(matches_savepath, 'RoMa', 'reference__SAM1005_matches'),np.asanyarray(kptsA))
+        np.save(os.path.join(matches_savepath, 'RoMa', 'target__SAM1007_matches'),np.asanyarray(kptsB))
+
+        logger.success(f'RoMa matches saved')
+
+        exit(0)
 
         ############
         ## Mast3r ##
