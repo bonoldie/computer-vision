@@ -56,7 +56,7 @@ def setupMaste3r():
 
 def setupRoMa():
     logger.info('Setting up RoMa(RoMa outdoor)...')
-    return roma_outdoor(device='cpu', coarse_res=1024, upsample_res=2048)
+    return roma_outdoor(device='cpu', coarse_res=int(420), upsample_res=int(560))
 
 def draw_matches(ref_points, dst_points, img0, img1):
     
@@ -93,13 +93,7 @@ if __name__ == '__main__':
     target = _SAM1007
 
     ref_H,ref_W = ref.shape[:2]
-    target_H,target_W = ref.shape[:2]
-    
-    # Models instances
-    RDD = setupRDD()
-    LF = setupLiftFeat()
-    Mast3r = setupMaste3r()
-    RoMa = setupRoMa()
+    target_H,target_W = ref.shape[:2]   
    
     logger.info(f'Matches save dir: {matches_savepath}')
 
@@ -114,15 +108,14 @@ if __name__ == '__main__':
         ##########
         ## RoMa ##
         ##########
+        RoMa = setupRoMa()
         logger.info('Running inference on RoMa...')
-        
+
         warp, certainty = RoMa.match('downloads/dante_dataset/dante_dataset/photos/_SAM1005.JPG', 'downloads/dante_dataset/dante_dataset/photos/_SAM1007.JPG', device='cpu')
         # Sample matches for estimation
         matches, certainty = RoMa.sample(warp, certainty)
         # Convert to pixel coordinates (RoMa produces matches in [-1,1]x[-1,1])
         kptsA, kptsB = RoMa.to_pixel_coordinates(matches, ref_H, ref_W, target_H, target_W)
-
-
 
         logger.log('SUCCESS' if len(kptsA) > 0 else 'WARNING',f'RoMa returned {len(kptsA)} matches')
     
@@ -131,11 +124,13 @@ if __name__ == '__main__':
 
         logger.success(f'RoMa matches saved')
 
-        exit(0)
+        del RoMa, warp, certainty, kptsA, kptsB
+        gc.collect()
 
         ############
         ## Mast3r ##
         ############
+        Mast3r = setupMaste3r()
         logger.info('Running inference on Mast3r...')
         
         images = load_images(['downloads/dante_dataset/dante_dataset/photos/_SAM1005.JPG', 'downloads/dante_dataset/dante_dataset/photos/_SAM1007.JPG'], size=512)
@@ -177,6 +172,7 @@ if __name__ == '__main__':
         ######################
         ## LiftFeat section ##
         ######################
+        LF = setupLiftFeat()
         logger.info('Running inference on LiftFeat...')
 
         ref_H,ref_W = ref.shape[:2]
@@ -194,9 +190,13 @@ if __name__ == '__main__':
 
         logger.success(f'LiftFeat matches saved')
 
+        del LF
+        gc.collect()
+
         #################
         ## RDD section ##
         #################
+        RDD = setupRDD()
 
         logger.info('Running inference on RDD...')
         ref_matches, target_matches, conf = RDD.match(ref, target, resize=1024)
