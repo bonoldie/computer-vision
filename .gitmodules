@@ -7,3 +7,6 @@
 [submodule "mast3r"]
 	path = mast3r
 	url = https://github.com/naver/mast3r.git
+[submodule "RoMa"]
+	path = RoMa
+	url = https://github.com/Vincentqyw/RoMa.git
