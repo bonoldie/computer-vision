@@ -9,12 +9,12 @@ from rdd.RDD.RDD import build
 from rdd.RDD.RDD_helper import RDD_helper
 from LiftFeat.models.liftfeat_wrapper import LiftFeat
 
-from utils.load_visibility import load_visibility 
+from utils.load_visibility import load_visibility, visualize_visibility
 
 import open3d as o3d
 from matplotlib import pyplot as plt
 import cv2
-import kornia
+#import kornia
 
 from PIL import Image
 import numpy as np
@@ -54,8 +54,13 @@ if __name__ == '__main__':
     # Load visibility map
 
     vis_map = load_visibility('downloads/dante_dataset/dante_dataset/Visibility.txt')
-    # vis_map: {"photo_name": [ {"index": "1234", "w": "12.2", "h": "799.5" }, ...], ...}
-    # print(vis_map["_SAM1001.JPG"])
+    #vis_map: {"photo_name": [ {"index": "1234", "w": "12.2", "h": "799.5" }, ...], ...}
+    
+    image_path = os.path.join(
+    os.getcwd(), "downloads", "dante_dataset", "dante_dataset", "photos", "_SAM1001.JPG")
+    
+    visualize_visibility(vis_map,image_path,radius=5)
+    
 
     pc = o3d.io.read_point_cloud('downloads/dante_dataset/dante_dataset/SamPointCloud.ply')
 
