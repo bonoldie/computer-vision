@@ -125,8 +125,6 @@ if __name__ == '__main__':
         logger.success(f'RDD matches saved')
 
 
-
-
         #canvas = draw_matches(_SAM1005_matches, _SAM1007_matches, _SAM1005,_SAM1007)
         #plt.figure(figsize=(12,12))
         #plt.imshow(canvas[..., ::-1]), plt.show()
