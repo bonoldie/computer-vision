@@ -18,7 +18,8 @@ import cv2
 import numpy as np
 from pathlib import Path
 
-import argparse
+
+
 from loguru import logger
 logger.add('logs/log_{time}.log', compression='zip', rotation='1 hour')
 
@@ -37,7 +38,8 @@ def setupRDD():
 
 def setupLiftFeat():
     logger.info('Setting up LiftFeat...')
-    liftfeat = LiftFeat(detect_threshold=0.05)    
+    liftfeat = LiftFeat(detect_threshold=0.05)   
+    liftfeat.cpu() 
     return liftfeat
 
 
@@ -54,13 +56,11 @@ def draw_matches(ref_points, dst_points, img0, img1):
 
     return img_matches
 
-
-
 if __name__ == '__main__':
     # Load visibility map
 
     vis_map_path = 'downloads/dante_dataset/dante_dataset/Visibility.txt'
-    logger.info(f'Loading visibility map at "{vis_map_path}"')
+    logger.info(f'Loading visibility map: {vis_map_path}')
     vis_map = load_visibility(vis_map_path)
     #vis_map: {"photo_name": [ {"index": "1234", "w": "12.2", "h": "799.5" }, ...], ...}
     
@@ -89,16 +89,41 @@ if __name__ == '__main__':
     with torch.no_grad():
         # RDD.cpu()
 
+        ######################
+        ## LiftFeat section ##
+        ######################
+        logger.info('Running inference on LiftFeat...')
+
+        ref_H,ref_W = ref.shape[:2]
+        ref_LF = cv2.resize(ref, (round(ref_W/3),round(ref_H/3)))
+
+        target_H,target_W = ref.shape[:2]
+        target_LF = cv2.resize(ref, (round(target_W/3),round(target_H/3)))
+
+        ref_matches, target_matches = LF.match_liftfeat(ref_LF, target_LF)
+        
+        logger.log('SUCCESS' if len(ref_matches) > 0 else 'WARNING',f'LiftFeat returned {len(ref_matches)} matches')
+    
+        np.save(os.path.join(matches_savepath, 'LiftFeat', 'reference__SAM1005_matches'),np.asanyarray(ref_matches))
+        np.save(os.path.join(matches_savepath, 'LiftFeat', 'target__SAM1007_matches'),np.asanyarray(target_matches))
+
+        logger.success(f'LiftFeat matches saved')
+
+
+        #################
+        ## RDD section ##
+        #################
 
         logger.info('Running inference on RDD...')
         ref_matches, target_matches, conf = RDD.match(ref, target, resize=1024)
         
-        logger.log('success' if len(ref_matches) > 0 else 'warning',f'RDD returned {len(ref_matches)} matches')
+        logger.log('SUCCESS' if len(ref_matches) > 0 else 'WARNING',f'RDD returned {len(ref_matches)} matches')
     
-        np.save(os.path.join(matches_savepath, 'RDD', 'ref__SAM1005_matches'),np.asanyarray(ref_matches))
-        np.save(os.path.join(matches_savepath, 'RDD', 'tar__SAM1005_matches'),np.asanyarray(target_matches))
+        np.save(os.path.join(matches_savepath, 'RDD', 'reference__SAM1005_matches'),np.asanyarray(ref_matches))
+        np.save(os.path.join(matches_savepath, 'RDD', 'target__SAM1007_matches'),np.asanyarray(target_matches))
 
         logger.success(f'RDD matches saved')
+
 
 
 
