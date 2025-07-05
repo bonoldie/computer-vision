@@ -1,7 +1,7 @@
 import sys
 import os
 
-from utils.visibility import load_visibility, visualize_visibility
+from utils.visibility import *
 
 import open3d as o3d
 from matplotlib import pyplot as plt
@@ -38,6 +38,13 @@ if __name__ == '__main__':
     reference__SAM1005_matches = np.load(os.path.join(matches_savepath, 'LiftFeat', 'reference__SAM1005_matches.npy'))
     target__SAM1007_matches = np.load(os.path.join(matches_savepath, 'LiftFeat', 'target__SAM1007_matches.npy'))
 
+    subdir = os.path.join("downloads", "dante_dataset", "dante_dataset", "photos")
+    image_name = "_SAM1005.JPG"
+
+    image_path = os.path.join(os.getcwd(), subdir, image_name)
+
+    count_matches(_SAM1005_vis,reference__SAM1005_matches,image_path,4)
+
     masking_result_LF = {}
 
     for dist in distances_to_check:
@@ -47,16 +54,16 @@ if __name__ == '__main__':
     logger.info('LiftFeat matches')
     logger.info(f'Total matches: {len(reference__SAM1005_matches)}')
 
-    for ref_match in reference__SAM1005_matches:
-        for vis_point in _SAM1005_vis:
-            norm = np.linalg.norm(ref_match - np.array([vis_point['w'], vis_point['h']]))
-            
-            for dist in distances_boundaries:    
-                if norm >= dist[0] and norm <= dist[1]:
-                    masking_result_LF[dist[1]].append(ref_match)
-
-    for dist_boundary in distances_boundaries:
-        logger.success(f'Matches inside range ({dist_boundary[0]} - {dist_boundary[1]}): {len(masking_result_LF[dist_boundary[1]])}')
+    #for ref_match in reference__SAM1005_matches:
+    #    for vis_point in _SAM1005_vis:
+    #        norm = np.linalg.norm(ref_match - np.array([vis_point['w'], vis_point['h']]))
+    #        
+    #        for dist in distances_boundaries:    
+    #            if norm >= dist[0] and norm <= dist[1]:
+    #                masking_result_LF[dist[1]].append(ref_match)
+#
+    #for dist_boundary in distances_boundaries:
+    #    logger.success(f'Matches inside range ({dist_boundary[0]} - {dist_boundary[1]}): {len(masking_result_LF[dist_boundary[1]])}')
 
     
 

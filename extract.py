@@ -14,7 +14,7 @@ from mast3r.mast3r.model import AsymmetricMASt3R
 from mast3r.mast3r.fast_nn import fast_reciprocal_NNs
 from mast3r.dust3r.dust3r.inference import inference
 from mast3r.dust3r.dust3r.utils.image import load_images
-from RoMa.romatch import roma_outdoor
+#from RoMa.romatch import roma_outdoor
 
 from utils.visibility import load_visibility, visualize_visibility
 
@@ -54,9 +54,9 @@ def setupMaste3r():
     return AsymmetricMASt3R.from_pretrained('downloads/MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric.pth').to('cpu')
 
 
-def setupRoMa():
-    logger.info('Setting up RoMa(RoMa outdoor)...')
-    return roma_outdoor(device='cpu', coarse_res=int(420), upsample_res=int(560))
+#def setupRoMa():
+#    logger.info('Setting up RoMa(RoMa outdoor)...')
+#    return roma_outdoor(device='cpu', coarse_res=int(420), upsample_res=int(560))
 
 def draw_matches(ref_points, dst_points, img0, img1):
     
@@ -93,7 +93,7 @@ if __name__ == '__main__':
     target = _SAM1007
 
     ref_H,ref_W = ref.shape[:2]
-    target_H,target_W = ref.shape[:2]   
+    target_H,target_W = target.shape[:2]   
    
     logger.info(f'Matches save dir: {matches_savepath}')
 
@@ -108,66 +108,66 @@ if __name__ == '__main__':
         ##########
         ## RoMa ##
         ##########
-        RoMa = setupRoMa()
-        logger.info('Running inference on RoMa...')
+        #RoMa = setupRoMa()
+        #logger.info('Running inference on RoMa...')
 
-        warp, certainty = RoMa.match('downloads/dante_dataset/dante_dataset/photos/_SAM1005.JPG', 'downloads/dante_dataset/dante_dataset/photos/_SAM1007.JPG', device='cpu')
-        # Sample matches for estimation
-        matches, certainty = RoMa.sample(warp, certainty)
-        # Convert to pixel coordinates (RoMa produces matches in [-1,1]x[-1,1])
-        kptsA, kptsB = RoMa.to_pixel_coordinates(matches, ref_H, ref_W, target_H, target_W)
-
-        logger.log('SUCCESS' if len(kptsA) > 0 else 'WARNING',f'RoMa returned {len(kptsA)} matches')
-    
-        np.save(os.path.join(matches_savepath, 'RoMa', 'reference__SAM1005_matches'),np.asanyarray(kptsA))
-        np.save(os.path.join(matches_savepath, 'RoMa', 'target__SAM1007_matches'),np.asanyarray(kptsB))
-
-        logger.success(f'RoMa matches saved')
-
-        del RoMa, warp, certainty, kptsA, kptsB
-        gc.collect()
+        #warp, certainty = RoMa.match('downloads/dante_dataset/dante_dataset/photos/_SAM1005.JPG', 'downloads/dante_dataset/dante_dataset/photos/_SAM1007.JPG', device='cpu')
+        ## Sample matches for estimation
+        #matches, certainty = RoMa.sample(warp, certainty)
+        ## Convert to pixel coordinates (RoMa produces matches in [-1,1]x[-1,1])
+        #kptsA, kptsB = RoMa.to_pixel_coordinates(matches, ref_H, ref_W, target_H, target_W)
+#
+        #logger.log('SUCCESS' if len(kptsA) > 0 else 'WARNING',f'RoMa returned {len(kptsA)} matches')
+    #
+        #np.save(os.path.join(matches_savepath, 'RoMa', 'reference__SAM1005_matches'),np.asanyarray(kptsA))
+        #np.save(os.path.join(matches_savepath, 'RoMa', 'target__SAM1007_matches'),np.asanyarray(kptsB))
+#
+        #logger.success(f'RoMa matches saved')
+#
+        #del RoMa, warp, certainty, kptsA, kptsB
+        #gc.collect()
 
         ############
         ## Mast3r ##
         ############
-        Mast3r = setupMaste3r()
-        logger.info('Running inference on Mast3r...')
-        
-        images = load_images(['downloads/dante_dataset/dante_dataset/photos/_SAM1005.JPG', 'downloads/dante_dataset/dante_dataset/photos/_SAM1007.JPG'], size=512)
-        #ref_Mast3r, = cv2.resize(ref, (512,512))
-        #target_Mast3r = cv2.resize(target, (512,512))
-        output = inference([tuple(images)], Mast3r, 'cpu', batch_size=1, verbose=False)
-
-        # at this stage, you have the raw dust3r predictions
-        view1, pred1 = output['view1'], output['pred1']
-        view2, pred2 = output['view2'], output['pred2']
-
-        desc1, desc2 = pred1['desc'].squeeze(0).detach(), pred2['desc'].squeeze(0).detach()
-
-        # find 2D-2D matches between the two images
-        matches_im0, matches_im1 = fast_reciprocal_NNs(desc1, desc2, subsample_or_initxy1=8, device='cpu', dist='dot', block_size=2**13)
-
-        # ignore small border around the edge
-        H0, W0 = view1['true_shape'][0]
-        valid_matches_im0 = (matches_im0[:, 0] >= 3) & (matches_im0[:, 0] < int(W0) - 3) & (
-            matches_im0[:, 1] >= 3) & (matches_im0[:, 1] < int(H0) - 3)
-
-        H1, W1 = view2['true_shape'][0]
-        valid_matches_im1 = (matches_im1[:, 0] >= 3) & (matches_im1[:, 0] < int(W1) - 3) & (
-            matches_im1[:, 1] >= 3) & (matches_im1[:, 1] < int(H1) - 3)
-
-        valid_matches = valid_matches_im0 & valid_matches_im1
-        matches_im0, matches_im1 = matches_im0[valid_matches], matches_im1[valid_matches]
-
-        logger.log('SUCCESS' if len(matches_im0) > 0 else 'WARNING',f'Mast3r returned {len(matches_im0)} matches')
-    
-        np.save(os.path.join(matches_savepath, 'Mast3r', 'reference__SAM1005_matches'),np.asanyarray(matches_im0))
-        np.save(os.path.join(matches_savepath, 'Mast3r', 'target__SAM1007_matches'),np.asanyarray(matches_im1))
-
-        logger.success(f'Mast3r matches saved')
-
-        del images, output, view1, view2, pred1, pred2, desc1, desc2, matches_im0, matches_im1, valid_matches_im0, valid_matches_im1, valid_matches, Mast3r
-        gc.collect() 
+        #Mast3r = setupMaste3r()
+        #logger.info('Running inference on Mast3r...')
+        #
+        #images = load_images(['downloads/dante_dataset/dante_dataset/photos/_SAM1005.JPG', 'downloads/dante_dataset/dante_dataset/photos/_SAM1007.JPG'], size=512)
+        ##ref_Mast3r, = cv2.resize(ref, (512,512))
+        ##target_Mast3r = cv2.resize(target, (512,512))
+        #output = inference([tuple(images)], Mast3r, 'cpu', batch_size=1, verbose=False)
+#
+        ## at this stage, you have the raw dust3r predictions
+        #view1, pred1 = output['view1'], output['pred1']
+        #view2, pred2 = output['view2'], output['pred2']
+#
+        #desc1, desc2 = pred1['desc'].squeeze(0).detach(), pred2['desc'].squeeze(0).detach()
+#
+        ## find 2D-2D matches between the two images
+        #matches_im0, matches_im1 = fast_reciprocal_NNs(desc1, desc2, subsample_or_initxy1=8, device='cpu', dist='dot', block_size=2**13)
+#
+        ## ignore small border around the edge
+        #H0, W0 = view1['true_shape'][0]
+        #valid_matches_im0 = (matches_im0[:, 0] >= 3) & (matches_im0[:, 0] < int(W0) - 3) & (
+        #    matches_im0[:, 1] >= 3) & (matches_im0[:, 1] < int(H0) - 3)
+#
+        #H1, W1 = view2['true_shape'][0]
+        #valid_matches_im1 = (matches_im1[:, 0] >= 3) & (matches_im1[:, 0] < int(W1) - 3) & (
+        #    matches_im1[:, 1] >= 3) & (matches_im1[:, 1] < int(H1) - 3)
+#
+        #valid_matches = valid_matches_im0 & valid_matches_im1
+        #matches_im0, matches_im1 = matches_im0[valid_matches], matches_im1[valid_matches]
+#
+        #logger.log('SUCCESS' if len(matches_im0) > 0 else 'WARNING',f'Mast3r returned {len(matches_im0)} matches')
+    #
+        #np.save(os.path.join(matches_savepath, 'Mast3r', 'reference__SAM1005_matches'),np.asanyarray(matches_im0))
+        #np.save(os.path.join(matches_savepath, 'Mast3r', 'target__SAM1007_matches'),np.asanyarray(matches_im1))
+#
+        #logger.success(f'Mast3r matches saved')
+#
+        #del images, output, view1, view2, pred1, pred2, desc1, desc2, matches_im0, matches_im1, valid_matches_im0, valid_matches_im1, valid_matches, Mast3r
+        #gc.collect() 
 
         ######################
         ## LiftFeat section ##
@@ -178,7 +178,7 @@ if __name__ == '__main__':
         ref_H,ref_W = ref.shape[:2]
         ref_LF = cv2.resize(ref, (round(ref_W/5),round(ref_H/5)))
 
-        target_H,target_W = ref.shape[:2]
+        target_H,target_W = target.shape[:2]
         target_LF = cv2.resize(ref, (round(target_W/5),round(target_H/5)))
 
         ref_matches, target_matches = LF.match_liftfeat(ref_LF, target_LF)

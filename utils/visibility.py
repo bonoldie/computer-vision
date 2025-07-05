@@ -54,5 +54,42 @@ def visualize_visibility(vis_map, image_path, radius):
     cv2.destroyAllWindows()
    
     
+    
+def count_matches(source_matches, target_matches, image_path, search_radius):
+    image_name = os.path.basename(image_path)
+
+    img = cv2.imread(image_path)
+    if img is None:
+        print(f"Failed to load image from '{image_path}'.")
+        return
+
+    h_img,w_img = img.shape[:2]
+    
+    src_img = np.zeros((h_img, w_img), dtype=np.uint8)
+    tgt_img = np.zeros((h_img, w_img), dtype=np.uint8)
+
+    # Place source match points
+    for pt in source_matches:
+        w, h = int(round(pt["w"])), int(round(pt["h"]))
+        if 0 <= w < w_img and 0 <= h < h_img:
+            #src_img[h, w] = 1
+            cv2.circle(src_img, (w, h), search_radius,(255, 0, 0), thickness=-1)  # filled circle
+        else:
+            print(f"Source match point ({w}, {h}) is out of bounds for image size ({w_img}, {h_img}).")
+    
+    cv2.imwrite("source_matches.jpeg", src_img)
+            
+
+    # Place target match points
+    for pt in target_matches:
+        w, h = int(round(pt[0])), int(round(pt[1]))
+        if 0 <= w < w_img and 0 <= h < h_img:
+            #tgt_img[h, w] = 1
+            cv2.circle(tgt_img, (w, h), search_radius,(255, 0, 0), thickness=-1)
+        else:
+            print(f"Target match point ({w}, {h}) is out of bounds for image size ({w_img}, {h_img}).")
+            
+    cv2.imwrite("target_matches.jpeg", tgt_img)
+    
 
 
