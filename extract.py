@@ -108,24 +108,24 @@ if __name__ == '__main__':
         #########
         # RoMa ##
         #########
-        # RoMa = setupRoMa()
-        # logger.info('Running inference on RoMa...')
+        RoMa = setupRoMa()
+        logger.info('Running inference on RoMa...')
 
-        # warp, certainty = RoMa.match('downloads/dante_dataset/dante_dataset/photos/_SAM1005.JPG', 'downloads/dante_dataset/dante_dataset/photos/_SAM1007.JPG', device='cpu')
-        # # Sample matches for estimation
-        # matches, certainty = RoMa.sample(warp, certainty)
-        # # Convert to pixel coordinates (RoMa produces matches in [-1,1]x[-1,1])
-        # kptsA, kptsB = RoMa.to_pixel_coordinates(matches, ref_H, ref_W, target_H, target_W)
+        warp, certainty = RoMa.match('downloads/dante_dataset/dante_dataset/photos/_SAM1005.JPG', 'downloads/dante_dataset/dante_dataset/photos/_SAM1007.JPG', device='cpu')
+        # Sample matches for estimation
+        matches, certainty = RoMa.sample(warp, certainty)
+        # Convert to pixel coordinates (RoMa produces matches in [-1,1]x[-1,1])
+        kptsA, kptsB = RoMa.to_pixel_coordinates(matches, ref_H, ref_W, target_H, target_W)
 
-        # logger.log('SUCCESS' if len(kptsA) > 0 else 'WARNING',f'RoMa returned {len(kptsA)} matches')
+        logger.log('SUCCESS' if len(kptsA) > 0 else 'WARNING',f'RoMa returned {len(kptsA)} matches')
     
-        # np.save(os.path.join(matches_savepath, 'RoMa', 'reference__SAM1005_matches'),np.asanyarray(kptsA))
-        # np.save(os.path.join(matches_savepath, 'RoMa', 'target__SAM1007_matches'),np.asanyarray(kptsB))
+        np.save(os.path.join(matches_savepath, 'RoMa', 'reference__SAM1005_matches'),np.asanyarray(kptsA))
+        np.save(os.path.join(matches_savepath, 'RoMa', 'target__SAM1007_matches'),np.asanyarray(kptsB))
 
-        # logger.success(f'RoMa matches saved')
+        logger.success(f'RoMa matches saved')
 
-        # del RoMa, warp, certainty, kptsA, kptsB
-        # gc.collect()
+        del RoMa, warp, certainty, kptsA, kptsB
+        gc.collect()
 
         ###########
         # Mast3r ##
