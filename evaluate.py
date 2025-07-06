@@ -25,7 +25,6 @@ if __name__ == '__main__':
 
     _SAM1005_vis = vis_map['_SAM1005.JPG']
 
-   
     distances_to_check.insert(0, 0)
     distances_boundaries = [[distances_to_check[i], distances_to_check[i+1]] for i in range(len(distances_to_check) - 1)]
 
@@ -49,8 +48,7 @@ if __name__ == '__main__':
 
     for dist in distances_to_check:
         masking_result_LF[dist] = []
-     
-
+    
     logger.info('LiftFeat matches')
     logger.info(f'Total matches: {len(reference__SAM1005_matches)}')
 
@@ -65,7 +63,8 @@ if __name__ == '__main__':
     #for dist_boundary in distances_boundaries:
     #    logger.success(f'Matches inside range ({dist_boundary[0]} - {dist_boundary[1]}): {len(masking_result_LF[dist_boundary[1]])}')
 
-    
+
+    exit()    
 
 
     #########
