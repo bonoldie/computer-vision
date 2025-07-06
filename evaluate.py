@@ -2,6 +2,8 @@ import sys
 import os
 from pathlib import Path
 
+import matplotlib.pyplot
+
 from utils.visibility import *
 from utils.view import *
 
@@ -9,7 +11,9 @@ import numpy as np
 from scipy.spatial.distance import cdist
 
 import open3d as o3d
-from matplotlib import pyplot as plt
+import matplotlib
+matplotlib.use('TkAgg')
+
 import cv2
 
 from loguru import logger
@@ -18,7 +22,6 @@ logger.add('logs/log_{time}.log', compression='zip', rotation='1 hour')
 matches_savepath = os.path.join(os.getcwd(), 'matches')
 
 distances_to_check = [3,5,7,15,30,50,100,200]
-
 
 if __name__ == '__main__':
     
@@ -56,7 +59,17 @@ if __name__ == '__main__':
     # view_2D_matches(reference__SAM1005_matches_RoMa[:, :],"".join([ref_image_name, '_RoMa_matches']), shape=ref_image.shape)# 
     # view_2D_matches(target__SAM1007_matches_RoMa[:, :],"".join([target_image_name, '_RoMa_matches']), shape=target_image.shape)# 
 
-    dist = cdist(reference__SAM1005_matches_RoMa, ref_vis_array)    
+    # [-1,1] -> [0,1]
+    reference__SAM1005_matches_RoMa = (reference__SAM1005_matches_RoMa + 1)/2
+
+    reference__SAM1005_matches_RoMa_tmp = np.copy(reference__SAM1005_matches_RoMa)
+    
+    reference__SAM1005_matches_RoMa[:, 0] = reference__SAM1005_matches_RoMa_tmp[:, 1] * ref_image.shape[1]
+    reference__SAM1005_matches_RoMa[:, 1] = (1 - reference__SAM1005_matches_RoMa_tmp[:, 0]) * ref_image.shape[0]    
+
+    # view_2D_matches(reference__SAM1005_matches_RoMa, "".join([target_image_name, '_RoMa_matches']), shape=ref_image.shape, bg=ref_image)
+
+    dist = cdist(reference__SAM1005_matches_RoMa, ref_vis_array)
     masking_result['RoMa'] = { 
         'reference_matches': reference__SAM1005_matches_RoMa,
         'target_matches': target__SAM1007_matches_RoMa,
@@ -82,16 +95,18 @@ if __name__ == '__main__':
         'target_matches': target__SAM1007_matches_Mast3r, 
         **{dist_boundary: {'mask': np.any(dist <= dist_boundary, axis=1), 'masked_matches': reference__SAM1005_matches_Mast3r[np.any(dist <= dist_boundary, axis=1)] } for dist_boundary in distances_to_check}
     }
+
+
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
     # exit(0)
 
-    view_2D_matches([],"".join([ref_image_name]), shape=ref_image.shape, bg=ref_image)
-    view_2D_matches(ref_vis_array,"".join([ref_image_name]), shape=ref_image.shape, bg=ref_image)
-    view_2D_matches(reference__SAM1005_matches_Mast3r,"".join([ref_image_name, '_Mast3r_matches']), shape=ref_image.shape, bg=ref_image)
-    view_2D_matches(masking_result['Mast3r'][3]['masked_matches'],"".join([ref_image_name, '_Mast3r_matches_after(3px)']), shape=ref_image.shape, bg=ref_image)
-    view_2D_matches(masking_result['Mast3r'][5]['masked_matches'],"".join([ref_image_name, '_Mast3r_matches(5px)']), shape=ref_image.shape, bg=ref_image)
-    view_2D_matches(masking_result['Mast3r'][7]['masked_matches'],"".join([ref_image_name, '_Mast3r_matches(7px)']), shape=ref_image.shape, bg=ref_image)
+    # view_2D_matches([],"".join([ref_image_name]), shape=ref_image.shape, bg=ref_image)
+    # view_2D_matches(ref_vis_array,"".join([ref_image_name]), shape=ref_image.shape, bg=ref_image)
+    # view_2D_matches(reference__SAM1005_matches_Mast3r,"".join([ref_image_name, '_Mast3r_matches']), shape=ref_image.shape, bg=ref_image)
+    # view_2D_matches(masking_result['Mast3r'][3]['masked_matches'],"".join([ref_image_name, '_Mast3r_matches_after(3px)']), shape=ref_image.shape, bg=ref_image)
+    # view_2D_matches(masking_result['Mast3r'][5]['masked_matches'],"".join([ref_image_name, '_Mast3r_matches(5px)']), shape=ref_image.shape, bg=ref_image)
+    # view_2D_matches(masking_result['Mast3r'][7]['masked_matches'],"".join([ref_image_name, '_Mast3r_matches(7px)']), shape=ref_image.shape, bg=ref_image)
 
     ##############
     ## LiftFeat ##
@@ -109,6 +124,9 @@ if __name__ == '__main__':
         'target_matches': target__SAM1007_matches_LiftFeat, 
         **{ dist_boundary: {'mask': np.any(dist <= dist_boundary, axis=1), 'masked_matches': reference__SAM1005_matches_LiftFeat[np.any(dist <= dist_boundary, axis=1)] } for dist_boundary in distances_to_check}
     }
+
+    # view_2D_matches(reference__SAM1005_matches_LiftFeat, "".join([target_image_name, '_LiftFeat_matches']), shape=ref_image.shape, bg=ref_image)
+
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
     # exit(0)
@@ -130,6 +148,9 @@ if __name__ == '__main__':
         **{ dist_boundary: {'mask': np.any(dist <= dist_boundary, axis=1), 'masked_matches': reference__SAM1005_matches_RDD[np.any(dist <= dist_boundary, axis=1)] } for dist_boundary in distances_to_check}
     }
 
+    view_2D_matches(reference__SAM1005_matches_RDD, "".join([target_image_name, '_RDD_matches']), shape=ref_image.shape, bg=ref_image)
+
+
     # Plot results
     distances_labels = tuple([*map(str, distances_to_check)])
     values = { }
@@ -145,7 +166,7 @@ if __name__ == '__main__':
     width = 0.2  # the width of the bars
     multiplier = 0
 
-    fig, ax = plt.subplots(layout='constrained')
+    fig, ax = matplotlib.pyplot.subplots(layout='constrained')
 
     for attribute, measurement in values.items():
         offset = width * multiplier
@@ -160,7 +181,7 @@ if __name__ == '__main__':
     ax.legend(loc='upper left', ncols=min(len(masking_result.keys()),5))
     # ax.set_ylim(0, 20)
 
-    plt.show()
+    matplotlib.pyplot.show()
 
     cv2.waitKey(0)
     cv2.destroyAllWindows()
