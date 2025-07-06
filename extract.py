@@ -25,7 +25,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 
-
+from matplotlib import pyplot as pl
 
 from loguru import logger
 logger.add('logs/log_{time}.log', compression='zip', rotation='1 hour')
@@ -108,24 +108,24 @@ if __name__ == '__main__':
         #########
         # RoMa ##
         #########
-        RoMa = setupRoMa()
-        logger.info('Running inference on RoMa...')
+        # RoMa = setupRoMa()
+        # logger.info('Running inference on RoMa...')
 
-        warp, certainty = RoMa.match('downloads/dante_dataset/dante_dataset/photos/_SAM1005.JPG', 'downloads/dante_dataset/dante_dataset/photos/_SAM1007.JPG', device='cpu')
-        # Sample matches for estimation
-        matches, certainty = RoMa.sample(warp, certainty)
-        # Convert to pixel coordinates (RoMa produces matches in [-1,1]x[-1,1])
-        kptsA, kptsB = RoMa.to_pixel_coordinates(matches, ref_H, ref_W, target_H, target_W)
+        # warp, certainty = RoMa.match('downloads/dante_dataset/dante_dataset/photos/_SAM1005.JPG', 'downloads/dante_dataset/dante_dataset/photos/_SAM1007.JPG', device='cpu')
+        # # Sample matches for estimation
+        # matches, certainty = RoMa.sample(warp, certainty)
+        # # Convert to pixel coordinates (RoMa produces matches in [-1,1]x[-1,1])
+        # kptsA, kptsB = RoMa.to_pixel_coordinates(matches, ref_H, ref_W, target_H, target_W)
 
-        logger.log('SUCCESS' if len(kptsA) > 0 else 'WARNING',f'RoMa returned {len(kptsA)} matches')
+        # logger.log('SUCCESS' if len(kptsA) > 0 else 'WARNING',f'RoMa returned {len(kptsA)} matches')
     
-        np.save(os.path.join(matches_savepath, 'RoMa', 'reference__SAM1005_matches'),np.asanyarray(kptsA))
-        np.save(os.path.join(matches_savepath, 'RoMa', 'target__SAM1007_matches'),np.asanyarray(kptsB))
+        # np.save(os.path.join(matches_savepath, 'RoMa', 'reference__SAM1005_matches'),np.asanyarray(kptsA))
+        # np.save(os.path.join(matches_savepath, 'RoMa', 'target__SAM1007_matches'),np.asanyarray(kptsB))
 
-        logger.success(f'RoMa matches saved')
+        # logger.success(f'RoMa matches saved')
 
-        del RoMa, warp, certainty, kptsA, kptsB
-        gc.collect()
+        # del RoMa, warp, certainty, kptsA, kptsB
+        # gc.collect()
 
         ###########
         # Mast3r ##
@@ -160,11 +160,50 @@ if __name__ == '__main__':
         matches_im0, matches_im1 = matches_im0[valid_matches], matches_im1[valid_matches]
 
         logger.log('SUCCESS' if len(matches_im0) > 0 else 'WARNING',f'Mast3r returned {len(matches_im0)} matches')
+
+
+        # Images are downscaled by the Mast3r preprocessing so we have to upscale to matches to cover the original image
+     
+        matches_im0, matches_im1 = np.asarray(matches_im0), np.asarray(matches_im1)
+        a = (ref_H / H0.item())
+        matches_im0[:, 0] = matches_im0[:, 0] * a
+        matches_im0[:, 1] = matches_im0[:, 1] * (ref_W / W0.item())
+
+        matches_im1[:, 0] = matches_im1[:, 0] * (target_H / H1.item())
+        matches_im1[:, 1] = matches_im1[:, 1] * (target_W / W1.item())
     
-        np.save(os.path.join(matches_savepath, 'Mast3r', 'reference__SAM1005_matches'),np.asanyarray(matches_im0))
-        np.save(os.path.join(matches_savepath, 'Mast3r', 'target__SAM1007_matches'),np.asanyarray(matches_im1))
+        np.save(os.path.join(matches_savepath, 'Mast3r', 'reference__SAM1005_matches'),matches_im0)
+        np.save(os.path.join(matches_savepath, 'Mast3r', 'target__SAM1007_matches'),matches_im1)
 
         logger.success(f'Mast3r matches saved')
+
+        if False:
+            # Visualize matches
+            n_viz = 20
+            num_matches = matches_im0.shape[0]
+            match_idx_to_viz = np.round(np.linspace(0, num_matches - 1, n_viz)).astype(int)
+            viz_matches_im0, viz_matches_im1 = matches_im0[match_idx_to_viz], matches_im1[match_idx_to_viz]
+
+            image_mean = torch.as_tensor([0.5, 0.5, 0.5], device='cpu').reshape(1, 3, 1, 1)
+            image_std = torch.as_tensor([0.5, 0.5, 0.5], device='cpu').reshape(1, 3, 1, 1)
+
+            viz_imgs = []
+            for i, view in enumerate([view1, view2]):
+                rgb_tensor = view['img'] * image_std + image_mean
+                viz_imgs.append(rgb_tensor.squeeze(0).permute(1, 2, 0).cpu().numpy())
+
+            H0, W0, H1, W1 = *viz_imgs[0].shape[:2], *viz_imgs[1].shape[:2]
+            img0 = np.pad(viz_imgs[0], ((0, max(H1 - H0, 0)), (0, 0), (0, 0)), 'constant', constant_values=0)
+            img1 = np.pad(viz_imgs[1], ((0, max(H0 - H1, 0)), (0, 0), (0, 0)), 'constant', constant_values=0)
+            img = np.concatenate((img0, img1), axis=1)
+            pl.figure()
+            pl.imshow(img)
+            cmap = pl.get_cmap('jet')
+            for i in range(n_viz):
+                (x0, y0), (x1, y1) = viz_matches_im0[i].T, viz_matches_im1[i].T
+                pl.plot([x0, x1 + W0], [y0, y1], '-+', color=cmap(i / (n_viz - 1)), scalex=False, scaley=False)
+            pl.show(block=True)
+
 
         del images, output, view1, view2, pred1, pred2, desc1, desc2, matches_im0, matches_im1, valid_matches_im0, valid_matches_im1, valid_matches, Mast3r
         gc.collect() 
