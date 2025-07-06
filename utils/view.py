@@ -23,7 +23,7 @@ def view_2D_matches(matches, name='',point_radius = 3, shape=(500, 500),bg=None)
         x, y = point
         cv2.circle(image, (x, y), radius=point_radius, color=(0, 0, 255), thickness=-1)
 
-    cv2.namedWindow(name, cv2.WINDOW_KEEPRATIO)
+    cv2.namedWindow(name)
     cv2.imshow(name, image)
     cv2.resizeWindow(name, 800, 800)
     

@@ -1,0 +1,78 @@
+Submodule RoMa contains modified content
+diff --git a/RoMa/romatch/models/encoders.py b/RoMa/romatch/models/encoders.py
+index 84fb543..db2a1f9 100644
+--- a/RoMa/romatch/models/encoders.py
++++ b/RoMa/romatch/models/encoders.py
+@@ -5,7 +5,7 @@ import torch.nn as nn
+ import torch.nn.functional as F
+ import torchvision.models as tvm
+ import gc
+-from romatch.utils.utils import get_autocast_params
++from ..utils.utils import get_autocast_params
+ 
+ 
+ class ResNet50(nn.Module):
+diff --git a/RoMa/romatch/models/matcher.py b/RoMa/romatch/models/matcher.py
+index 6cc45b7..76c2e05 100644
+--- a/RoMa/romatch/models/matcher.py
++++ b/RoMa/romatch/models/matcher.py
+@@ -9,10 +9,10 @@ import warnings
+ from warnings import warn
+ from PIL import Image
+ 
+-from romatch.utils import get_tuple_transform_ops
+-from romatch.utils.local_correlation import local_correlation
+-from romatch.utils.utils import check_rgb, cls_to_flow_refine, get_autocast_params, check_not_i16
+-from romatch.utils.kde import kde
++from ..utils import get_tuple_transform_ops
++from ..utils.local_correlation import local_correlation
++from ..utils.utils import check_rgb, cls_to_flow_refine, get_autocast_params, check_not_i16
++from ..utils.kde import kde
+ 
+ class ConvRefiner(nn.Module):
+     def __init__(
+diff --git a/RoMa/romatch/models/model_zoo/roma_models.py b/RoMa/romatch/models/model_zoo/roma_models.py
+index 4f8a08f..c6b6381 100644
+--- a/RoMa/romatch/models/model_zoo/roma_models.py
++++ b/RoMa/romatch/models/model_zoo/roma_models.py
+@@ -1,10 +1,10 @@
+ import warnings
+ import torch.nn as nn
+ import torch
+-from romatch.models.matcher import *
+-from romatch.models.transformer import Block, TransformerDecoder, MemEffAttention
+-from romatch.models.encoders import *
+-from romatch.models.tiny import TinyRoMa
++from ...models.matcher import *
++from ...models.transformer import Block, TransformerDecoder, MemEffAttention
++from ...models.encoders import *
++from ...models.tiny import TinyRoMa
+ 
+ def tiny_roma_v1_model(weights = None, freeze_xfeat=False, exact_softmax=False, xfeat = None):
+     model = TinyRoMa(
+diff --git a/RoMa/romatch/models/tiny.py b/RoMa/romatch/models/tiny.py
+index 88f44af..c9cc6b3 100644
+--- a/RoMa/romatch/models/tiny.py
++++ b/RoMa/romatch/models/tiny.py
+@@ -10,7 +10,7 @@ import numpy as np
+ from torch import nn
+ from PIL import Image
+ from torchvision.transforms import ToTensor
+-from romatch.utils.kde import kde
++from ..utils.kde import kde
+ 
+ class BasicLayer(nn.Module):
+     """
+diff --git a/RoMa/romatch/models/transformer/__init__.py b/RoMa/romatch/models/transformer/__init__.py
+index 983f03c..86ed1e3 100644
+--- a/RoMa/romatch/models/transformer/__init__.py
++++ b/RoMa/romatch/models/transformer/__init__.py
+@@ -2,7 +2,7 @@ import torch
+ import torch.nn as nn
+ import torch.nn.functional as F
+ 
+-from romatch.utils.utils import get_grid, get_autocast_params
++from ...utils.utils import get_grid, get_autocast_params
+ from .layers.block import Block
+ from .layers.attention import MemEffAttention
+ from .dinov2 import vit_large
