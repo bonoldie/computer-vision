@@ -47,8 +47,8 @@ if __name__ == '__main__':
     # distances_boundaries = [[distances_to_check[i], distances_to_check[i+1]] for i in range(len(distances_to_check) - 1)]
 
     logger.info('Masking matches based on visibility of reference image')
-
-    masking_result =  dict([['RoMa', {}], ['Mast3r', {}], ['LiftFeat', {}], ['RDD', {}]])
+    
+    masking_result = {'RoMa': {}, 'Mast3r': {}, 'LiftFeat': {}, 'RDD': {}}
 
     ##########
     ## RoMa ##
@@ -62,15 +62,16 @@ if __name__ == '__main__':
     # view_2D_matches(target__SAM1007_matches_RoMa[:, :],"".join([target_image_name, '_RoMa_matches']), shape=target_image.shape)# 
 
     # [-1,1] -> [0,1]
-    reference__SAM1005_matches_RoMa = (reference__SAM1005_matches_RoMa + 1)/2
-    
+    reference__SAM1005_matches_RoMa = (reference__SAM1005_matches_RoMa + 1)/2   
     reference__SAM1005_matches_RoMa_tmp = np.copy(reference__SAM1005_matches_RoMa)
 
     # Scale and re-referencing about cv2 axis    
     reference__SAM1005_matches_RoMa[:, 0] = reference__SAM1005_matches_RoMa_tmp[:, 1] * ref_image.shape[1]
     reference__SAM1005_matches_RoMa[:, 1] = (1 - reference__SAM1005_matches_RoMa_tmp[:, 0]) * ref_image.shape[0]    
 
-    #view_2D_matches(reference__SAM1005_matches_RoMa, "".join([target_image_name, '_RoMa_matches']), shape=ref_image.shape, bg=ref_image, point_radius=2)
+    image=view_2D_matches(reference__SAM1005_matches_RoMa, "".join([ref_image_name, '_RoMa_matches']), point_radius=5, bg_image=ref_image)
+    
+    cv2.imwrite('RoMa matches.JPEG',image)
 
     dist = cdist(reference__SAM1005_matches_RoMa, ref_vis_array)
     masking_result['RoMa'] = { 
@@ -99,27 +100,16 @@ if __name__ == '__main__':
         **{dist_boundary: {'mask': np.any(dist <= dist_boundary, axis=1), 'masked_matches': reference__SAM1005_matches_Mast3r[np.any(dist <= dist_boundary, axis=1)] } for dist_boundary in distances_to_check}
     }
 
-
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
-    # exit(0)
-
-    # view_2D_matches([],"".join([ref_image_name]), shape=ref_image.shape, bg=ref_image)
-    # view_2D_matches(ref_vis_array,"".join([ref_image_name]), shape=ref_image.shape, bg=ref_image)
-    # view_2D_matches(reference__SAM1005_matches_Mast3r,"".join([ref_image_name, '_Mast3r_matches']), shape=ref_image.shape, bg=ref_image)
-    # view_2D_matches(masking_result['Mast3r'][3]['masked_matches'],"".join([ref_image_name, '_Mast3r_matches_after(3px)']), shape=ref_image.shape, bg=ref_image)
-    # view_2D_matches(masking_result['Mast3r'][5]['masked_matches'],"".join([ref_image_name, '_Mast3r_matches(5px)']), shape=ref_image.shape, bg=ref_image)
-    # view_2D_matches(masking_result['Mast3r'][7]['masked_matches'],"".join([ref_image_name, '_Mast3r_matches(7px)']), shape=ref_image.shape, bg=ref_image)
+    image=view_2D_matches(reference__SAM1005_matches_Mast3r, "".join([ref_image_name, '_Mast3r_matches']), point_radius=5, bg_image=ref_image)
+    
+    cv2.imwrite('Mast3r matches.JPEG',image)
 
     ##############
     ## LiftFeat ##
     ##############
 
     reference__SAM1005_matches_LiftFeat = np.load(os.path.join(matches_savepath, 'LiftFeat', 'reference__SAM1005_matches.npy'))
-    target__SAM1007_matches_LiftFeat = np.load(os.path.join(matches_savepath, 'LiftFeat', 'target__SAM1007_matches.npy'))
-
-    # view_2D_matches(reference__SAM1005_matches_LiftFeat[:, :],"".join([ref_image_name, '_LiftFeat_matches']), shape=ref_image.shape)# 
-    # view_2D_matches(target__SAM1007_matches_LiftFeat[:, :],"".join([target_image_name, '_LiftFeat_matches']), shape=target_image.shape)# 
+    target__SAM1007_matches_LiftFeat = np.load(os.path.join(matches_savepath, 'LiftFeat', 'target__SAM1007_matches.npy')) 
 
     dist = cdist(reference__SAM1005_matches_LiftFeat, ref_vis_array)    
     masking_result['LiftFeat'] = {
@@ -128,7 +118,8 @@ if __name__ == '__main__':
         **{ dist_boundary: {'mask': np.any(dist <= dist_boundary, axis=1), 'masked_matches': reference__SAM1005_matches_LiftFeat[np.any(dist <= dist_boundary, axis=1)] } for dist_boundary in distances_to_check}
     }
 
-    # view_2D_matches(reference__SAM1005_matches_LiftFeat, "".join([target_image_name, '_LiftFeat_matches']), shape=ref_image.shape, bg=ref_image)
+    image=view_2D_matches(reference__SAM1005_matches_LiftFeat, "".join([ref_image_name, '_LiftFeat_matches']), point_radius=5, bg_image=ref_image)
+    cv2.imwrite('LiftFeat matches.JPEG',image)
 
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
@@ -141,8 +132,6 @@ if __name__ == '__main__':
     reference__SAM1005_matches_RDD = np.load(os.path.join(matches_savepath, 'RDD', 'reference__SAM1005_matches.npy'))
     target__SAM1007_matches_RDD = np.load(os.path.join(matches_savepath, 'RDD', 'target__SAM1007_matches.npy'))
 
-    # view_2D_matches(reference__SAM1005_matches_RDD[:, :],"".join([ref_image_name, '_RDD_matches']), shape=ref_image.shape)# 
-    # view_2D_matches(target__SAM1007_matches_RDD[:, :],"".join([target_image_name, '_RDD_matches']), shape=target_image.shape)# 
 
     dist = cdist(reference__SAM1005_matches_RDD, ref_vis_array)    
     masking_result['RDD'] = {
@@ -151,7 +140,8 @@ if __name__ == '__main__':
         **{ dist_boundary: {'mask': np.any(dist <= dist_boundary, axis=1), 'masked_matches': reference__SAM1005_matches_RDD[np.any(dist <= dist_boundary, axis=1)] } for dist_boundary in distances_to_check}
     }
 
-    # view_2D_matches(reference__SAM1005_matches_RDD, "".join([target_image_name, '_RDD_matches']), shape=ref_image.shape, bg=ref_image)
+    image=view_2D_matches(reference__SAM1005_matches_RDD, "".join([ref_image_name, '_RoMa_matches']), point_radius=5, bg_image=ref_image)
+    cv2.imwrite('RDD matches.JPEG',image)
 
     # Summary
     summary = PrettyTable(['model', 'total matches'])
