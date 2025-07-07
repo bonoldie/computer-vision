@@ -11,7 +11,7 @@ Tested feature-matching NN:
 
 ## Reference and target images
 
-We selected two images(reference and target respectively)s
+We selected two images(reference and target respectively) and then ran each neural network on this pair.
 
 
 | ![](assets/dante_ref.JPG) | ![](assets/dante_target.JPG) |
@@ -20,7 +20,7 @@ We selected two images(reference and target respectively)s
 |                           |                              |
 
 
-We ran each neural network on this pair obtaining matches on the images pair.
+## Summary 
 
 | Model    | Total matches |
 | -------- | ------------- |
@@ -40,8 +40,6 @@ We ran each neural network on this pair obtaining matches on the images pair.
 Clone this report: ```git clone --recurse-submodules [this repo]```
 Apply patches: ```patch -p1 < patches/*.diff```
 Run setup (may take a while...): ````python3 setupEnv.py```
-
-
 
 ## References
 
