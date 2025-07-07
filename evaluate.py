@@ -14,7 +14,9 @@ import open3d as o3d
 import matplotlib
 matplotlib.use('TkAgg')
 
+from prettytable import PrettyTable 
 import cv2
+
 
 from loguru import logger
 logger.add('logs/log_{time}.log', compression='zip', rotation='1 hour')
@@ -61,13 +63,14 @@ if __name__ == '__main__':
 
     # [-1,1] -> [0,1]
     reference__SAM1005_matches_RoMa = (reference__SAM1005_matches_RoMa + 1)/2
-
-    reference__SAM1005_matches_RoMa_tmp = np.copy(reference__SAM1005_matches_RoMa)
     
+    reference__SAM1005_matches_RoMa_tmp = np.copy(reference__SAM1005_matches_RoMa)
+
+    # Scale and re-referencing about cv2 axis    
     reference__SAM1005_matches_RoMa[:, 0] = reference__SAM1005_matches_RoMa_tmp[:, 1] * ref_image.shape[1]
     reference__SAM1005_matches_RoMa[:, 1] = (1 - reference__SAM1005_matches_RoMa_tmp[:, 0]) * ref_image.shape[0]    
 
-    # view_2D_matches(reference__SAM1005_matches_RoMa, "".join([target_image_name, '_RoMa_matches']), shape=ref_image.shape, bg=ref_image)
+    #view_2D_matches(reference__SAM1005_matches_RoMa, "".join([target_image_name, '_RoMa_matches']), shape=ref_image.shape, bg=ref_image, point_radius=2)
 
     dist = cdist(reference__SAM1005_matches_RoMa, ref_vis_array)
     masking_result['RoMa'] = { 
@@ -148,17 +151,23 @@ if __name__ == '__main__':
         **{ dist_boundary: {'mask': np.any(dist <= dist_boundary, axis=1), 'masked_matches': reference__SAM1005_matches_RDD[np.any(dist <= dist_boundary, axis=1)] } for dist_boundary in distances_to_check}
     }
 
-    view_2D_matches(reference__SAM1005_matches_RDD, "".join([target_image_name, '_RDD_matches']), shape=ref_image.shape, bg=ref_image)
+    # view_2D_matches(reference__SAM1005_matches_RDD, "".join([target_image_name, '_RDD_matches']), shape=ref_image.shape, bg=ref_image)
 
+    # Summary
+    summary = PrettyTable(['model', 'total matches'])
 
     # Plot results
     distances_labels = tuple([*map(str, distances_to_check)])
     values = { }
 
     for model in masking_result.keys():
+        summary.add_row([model, len(masking_result[model]['reference_matches'])])
         values[model] = []
         for label in distances_to_check:
-            values[model].append(len(masking_result[model][label]['masked_matches'])/len(masking_result[model]['reference_matches']) * 100)
+            survived_matches_ratio = len(masking_result[model][label]['masked_matches'])/len(masking_result[model]['reference_matches'])
+            percentage_string = '{0:.1f}'.format(survived_matches_ratio * 100)
+
+            values[model].append(round(survived_matches_ratio * 100, 1))
 
         values[model] = tuple(values[model]) 
 
@@ -175,12 +184,14 @@ if __name__ == '__main__':
         multiplier += 1
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set_ylabel('valid matches/total matches (%)')
+    ax.set_ylabel('valid matches / total matches  (%)')
     ax.set_title('')
+    ax.set_xlabel('max distance from visible 3D point (px)')
     ax.set_xticks(x + width, distances_labels)
     ax.legend(loc='upper left', ncols=min(len(masking_result.keys()),5))
     # ax.set_ylim(0, 20)
 
+    print(summary)
     matplotlib.pyplot.show()
 
     cv2.waitKey(0)
