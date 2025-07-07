@@ -30,16 +30,16 @@ We selected two images(reference and target respectively) and then ran each neur
 | RDD      | 1837          |
 
 
-
 ![](assets/results/masking.png)
+
 
 ## Setup
 
-> To run torch on CPU run ```export CUDA_VISIBLE_DEVICES=""```
+> To run torch on CPU run ```export CUDA_VISIBLE_DEVICES=""```  
 
-Clone this report: ```git clone --recurse-submodules [this repo]```
-Apply patches: ```patch -p1 < patches/*.diff```
-Run setup (may take a while...): ````python3 setupEnv.py```
+Clone this report: ```git clone --recurse-submodules [this repo]```   
+Apply patches: ```patch -p1 < patches/*.diff```  
+Run setup (may take a while...): ```python3 setupEnv.py```  
 
 ## References
 
