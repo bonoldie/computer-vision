@@ -6,8 +6,8 @@ from pathlib import Path
 
 links = [
     ('RDD-v2.pth', 'https://univr-my.sharepoint.com/:u:/g/personal/enrico_bonoldi_studenti_univr_it/EWEQXe7du41KpG9L2sZGM8cByUAmy6TgICSa8p0aIbIRGw?e=LnWp5y&download=1'),
-    ('MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric.pth', 'https://download.europe.naverlabs.com/ComputerVision/MASt3R/MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric.pth'),
-    ('dante_dataset.zip', 'https://univr-my.sharepoint.com/:u:/g/personal/enrico_bonoldi_studenti_univr_it/EaWhfmHAH9RKue-tR2JDvtEBIri9Q3Wn1hhFHJdSNUF42A?e=cH5ELe&download=1'),
+    ('MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric.pth', 'https://download.europe.naverlabs.com/ComputerVision/MASt3R/MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric.pth')
+    # ('dante_dataset.zip', 'https://univr-my.sharepoint.com/:u:/g/personal/enrico_bonoldi_studenti_univr_it/EaWhfmHAH9RKue-tR2JDvtEBIri9Q3Wn1hhFHJdSNUF42A?e=cH5ELe&download=1'),
 ]
 
 download_dir = 'download'
