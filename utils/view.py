@@ -31,7 +31,8 @@ def view_2D_matches(matches, plot_name='',point_radius = 3 , bg_image=[]):
         if 0 <= x < img_w and 0 <= y < img_h:
             cv2.circle(image, (x, y), radius=point_radius, color=(0, 0, 255), thickness=-1)
         else:
-            print(f"[view_2D_matches] Point {point} is out of bounds for the image size {image.shape[:2]}.")
+            pass
+           ## print(f"[view_2D_matches] Point {point} is out of bounds for the image size {image.shape[:2]}.")
 
 
     window_w, window_h = img_w // 2, img_h // 2

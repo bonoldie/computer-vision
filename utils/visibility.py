@@ -87,7 +87,8 @@ def count_matches(source_matches, target_matches, image_path, search_radius):
             #tgt_img[h, w] = 1
             cv2.circle(tgt_img, (w, h), search_radius,(255, 0, 0), thickness=-1)
         else:
-            print(f"Target match point ({w}, {h}) is out of bounds for image size ({w_img}, {h_img}).")
+            pass
+            # print(f"Target match point ({w}, {h}) is out of bounds for image size ({w_img}, {h_img}).")
             
     cv2.imwrite("target_matches.jpeg", tgt_img)
     

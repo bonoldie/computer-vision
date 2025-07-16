@@ -1,6 +1,6 @@
 from src.extract import evaluateRDD
 from utils.visibility import load_visibility
-from utils.view import convert_coords
+from utils.view import convert_coords, view_2D_matches
 import cv2
 from pathlib import Path
 import open3d as o3d
@@ -12,6 +12,19 @@ pairs_path = [
     # (reference_path, target_path)
     ('downloads/dante_dataset/dante_dataset/photos/_SAM1005.JPG', 'downloads/dante_dataset/dante_dataset/photos/_SAM1007.JPG'),
 ]
+
+def draw_matches(ref_points, dst_points, img0, img1):
+    
+    # Prepare keypoints and matches for drawMatches function
+    keypoints0 = [cv2.KeyPoint(p[0], p[1], 1000) for p in ref_points]
+    keypoints1 = [cv2.KeyPoint(p[0], p[1], 1000) for p in dst_points]
+    matches = [cv2.DMatch(i,i,0) for i in range(len(ref_points))]
+
+    # Draw inlier matches
+    img_matches = cv2.drawMatches(img0, keypoints0, img1, keypoints1, matches, None,
+                                  matchColor=(0, 255, 0), flags=2)
+
+    return img_matches
 
 
 def loadPairs(pairs_path):
@@ -37,7 +50,7 @@ dist_coeffs = np.array([
      0.12963081329     # k3
 ])
 
-def deep_match(reference, target, visibility_reference,  model_pointcloud, match_max_distance=3):
+def deep_match(reference, target, visibility_reference,  model_pointcloud, match_max_distance=15):
 
     reference_vis_array = convert_coords(np.asarray([*map( lambda vis_entry: [vis_entry['w'], vis_entry['h']], visibility_reference)]), width=reference.shape[1], height=reference.shape[0] )
     
@@ -50,6 +63,11 @@ def deep_match(reference, target, visibility_reference,  model_pointcloud, match
     # TODO add other models
     deep_match_results['by_model']['RDD'] = {'matches': evaluateRDD(reference, target)}
 
+    # draw_matches(deep_match_results['by_model']['RDD']['matches']['reference_matches'], deep_match_results['by_model']['RDD']['matches']['target_matches'],reference,target)
+    # view_2D_matches(deep_match_results['by_model']['RDD']['matches']['reference_matches'],'a', bg_image=reference)
+    #view_2D_matches(reference_vis_array,'a', bg_image=reference)
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
 
     pc_array = np.asarray(model_pointcloud.points)
 
@@ -72,20 +90,35 @@ def deep_match(reference, target, visibility_reference,  model_pointcloud, match
             deep_match_results['by_model'][model]['pose_data']['target_points'].append(target_2d_point)
             deep_match_results['by_model'][model]['pose_data']['model_points'].append(model_3d_point)
 
+        
         deep_match_results['by_model'][model]['pose_data']['target_points'] = np.asanyarray(deep_match_results['by_model'][model]['pose_data']['target_points'])
         deep_match_results['by_model'][model]['pose_data']['model_points'] = np.asanyarray(deep_match_results['by_model'][model]['pose_data']['model_points'])
         
+        #view_2D_matches(deep_match_results['by_model'][model]['pose_data']['target_points'],'a', bg_image=target)
+        #cv2.waitKey(0)
+        #cv2.destroyAllWindows()
+
         print(deep_match_results['by_model'][model]['pose_data']['target_points'].shape)
         print(deep_match_results['by_model'][model]['pose_data']['model_points'].shape)
 
         success, rvec, tvec = cv2.solvePnP(deep_match_results['by_model'][model]['pose_data']['model_points'], deep_match_results['by_model'][model]['pose_data']['target_points'], cameraMatrix=camera_matrix, distCoeffs=dist_coeffs, flags=cv2.SOLVEPNP_ITERATIVE)
+        
+        #due_D = np.asarray([*map( lambda vis_entry: [vis_entry['w'], vis_entry['h']], visibility_reference)])
+        #tre_D = np.asarray([*map( lambda vis_entry: pc_array[vis_entry['index'], :], visibility_reference)])
+
+        #print(due_D.shape)
+        #print(tre_D.shape)
+        #success, rvec, tvec = cv2.solvePnP(tre_D, due_D, cameraMatrix=camera_matrix, distCoeffs=dist_coeffs, flags=cv2.SOLVEPNP_ITERATIVE)
 
         deep_match_results['by_model'][model]['pose_data']['success'] = success
         rmat, _ = cv2.Rodrigues(rvec)
         deep_match_results['by_model'][model]['pose_data']['R'] = rmat 
         deep_match_results['by_model'][model]['pose_data']['t'] = tvec
 
+        target_reproj, _ = cv2.projectPoints(pc_array, rvec, tvec, cameraMatrix=camera_matrix, distCoeffs=dist_coeffs)
 
+        deep_match_results['by_model'][model]['target_reproj']  = np.array(target_reproj, dtype=np.float32).astype(int)
+        deep_match_results['by_model'][model]['target_reproj'] = np.squeeze(deep_match_results['by_model'][model]['target_reproj'], axis=1)
         # matches_mask = np.any(dist <= match_max_distance, axis=1)
         # point_index_mask = np.any(dist <= match_max_distance, axis=2)
 
@@ -112,9 +145,14 @@ if __name__ == '__main__':
 
         pairs_match_results.append(deep_match(pair[0], pair[1], visibility_reference, pc))
 
-    
+    print(pairs_match_results[0]['by_model']['RDD']['pose_data']['success'])
     print(pairs_match_results[0]['by_model']['RDD']['pose_data']['R'])
     print(pairs_match_results[0]['by_model']['RDD']['pose_data']['t'])
 
 
+    print(pairs_match_results[0]['by_model']['RDD']['target_reproj'])
+
+    view_2D_matches(pairs_match_results[0]['by_model']['RDD']['target_reproj'],'a', bg_image=pairs_match_results[0]['target_image'])
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
