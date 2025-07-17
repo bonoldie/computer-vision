@@ -16,6 +16,9 @@ from mast3r.dust3r.dust3r.inference import inference
 from mast3r.dust3r.dust3r.utils.image import load_images
 from RoMa.romatch import roma_outdoor
 
+import pickle
+import hashlib
+
 from utils.visibility import load_visibility, visualize_visibility
 
 import open3d as o3d
@@ -58,7 +61,19 @@ def setupRoMa():
     logger.info('Setting up RoMa(RoMa outdoor)...')
     return roma_outdoor(device='cpu', coarse_res=int(700), upsample_res=int(840))
 
-def evaluateRDD(reference, target, model=None):
+def evaluateRDD(reference, target, model=None, cache=True):
+    
+    if cache:
+        logger.info('Checking caches...')
+        cache_path = os.path.join('.caches', 'RDD', hashlib.sha256(reference.tobytes()).hexdigest() + hashlib.sha256(target.tobytes()).hexdigest() + '.pkl')
+
+        if(Path(cache_path).exists()):
+            logger.success('Returning matches from cache')
+            with open(cache_path, "rb") as cached_file:
+                return pickle.load(cached_file)
+        else:
+            logger.info('No cached result found')
+
     cleanup = False
     if model == None:
         cleanup = True
@@ -70,10 +85,19 @@ def evaluateRDD(reference, target, model=None):
         del model
         gc.collect()
     
-    return {
+    res = {
         'reference_matches': ref_matches,
         'target_matches': target_matches
     }
+
+    if cache:
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        with open(cache_path, "wb") as cache_file:
+            pickle.dump(res, cache_file)
+            logger.success('Matches cached')
+
+    return res
+
 
 def evaluateLiftFeat(reference, target, LF_scale_factor=1/3, model=None):
     cleanup = False

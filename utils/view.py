@@ -1,15 +1,45 @@
 import numpy as np
 import cv2
 
-def convert_coords(coords: np.ndarray, width: int, height: int) -> np.ndarray:
 
+def zephyr_to_cv2(coords: np.ndarray, width: int, height: int) -> np.ndarray:
     converted = np.empty_like(coords)
-    converted[:, 0] = coords[:, 0] # width - 1 -   # Flip x (columns)
+    converted[:, 0] = coords[:, 0]               # Keep x (columns)
     converted[:, 1] = height - 1 - coords[:, 1]  # Flip y (rows)
     return converted
 
-def view_2D_matches(matches, plot_name='',point_radius = 3 , bg_image=[]):
+
+def cv2_to_zephyr(coords: np.ndarray, width: int, height: int) -> np.ndarray:
+    converted = np.empty_like(coords)
+    converted[:, 0] = coords[:, 0]               # Keep x (columns)
+    converted[:, 1] = height - 1 - coords[:, 1]  # Flip y (rows)
+    return converted
+
+
+def compute_camera_matrix(fx, fy, cx, cy):
+    return np.array([
+        [fx, 0,  cx],
+        [0,  fy, cy],
+        [0,  0,  1.0],
+    ])
+
+def draw_matches(ref_points, dst_points, img0, img1):
     
+    # Prepare keypoints and matches for drawMatches function
+    keypoints0 = [cv2.KeyPoint(p[0], p[1], 1000) for p in ref_points]
+    keypoints1 = [cv2.KeyPoint(p[0], p[1], 1000) for p in dst_points]
+    matches = [cv2.DMatch(i,i,0) for i in range(len(ref_points))]
+
+    # Draw inlier matches
+    img_matches = cv2.drawMatches(img0, keypoints0, img1, keypoints1, matches, None,
+                                  matchColor=(0, 255, 0), flags=2)
+
+    return img_matches
+
+
+
+def view_2D_matches(matches, plot_name='', point_radius=3, bg_image=[]):
+
     matches = np.asarray(matches)
     if matches.shape[1] != 2:
         raise ValueError("Each match point must be 2D (x, y).")
@@ -29,15 +59,15 @@ def view_2D_matches(matches, plot_name='',point_radius = 3 , bg_image=[]):
     for point in matches:
         x, y = point
         if 0 <= x < img_w and 0 <= y < img_h:
-            cv2.circle(image, (x, y), radius=point_radius, color=(0, 0, 255), thickness=-1)
+            cv2.circle(image, (x, y), radius=point_radius,
+                       color=(0, 0, 255), thickness=-1)
         else:
             pass
-           ## print(f"[view_2D_matches] Point {point} is out of bounds for the image size {image.shape[:2]}.")
-
+           # print(f"[view_2D_matches] Point {point} is out of bounds for the image size {image.shape[:2]}.")
 
     window_w, window_h = img_w // 2, img_h // 2
     cv2.namedWindow(plot_name, cv2.WINDOW_KEEPRATIO)
     cv2.imshow(plot_name, image)
     cv2.resizeWindow(plot_name, window_w, window_h)
-    
+
     return image
