@@ -6,8 +6,9 @@ from pathlib import Path
 
 links = [
     ('RDD-v2.pth', 'https://univr-my.sharepoint.com/:u:/g/personal/enrico_bonoldi_studenti_univr_it/EWEQXe7du41KpG9L2sZGM8cByUAmy6TgICSa8p0aIbIRGw?e=LnWp5y&download=1'),
-    ('MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric.pth', 'https://download.europe.naverlabs.com/ComputerVision/MASt3R/MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric.pth')
-    # ('dante_dataset.zip', 'https://univr-my.sharepoint.com/:u:/g/personal/enrico_bonoldi_studenti_univr_it/EaWhfmHAH9RKue-tR2JDvtEBIri9Q3Wn1hhFHJdSNUF42A?e=cH5ELe&download=1'),
+    ('MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric.pth', 'https://download.europe.naverlabs.com/ComputerVision/MASt3R/MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric.pth'),
+    ('dante_rework.zip', 'https://univr-my.sharepoint.com/:u:/g/personal/enrico_bonoldi_studenti_univr_it/EXVk2qxpxFlLogL2AGPTyuQBVj-H03EqR9PQKyFELldi8g?e=bT8gSb&download=1'),
+    ('dante_dataset.zip', 'https://univr-my.sharepoint.com/:u:/g/personal/enrico_bonoldi_studenti_univr_it/EaWhfmHAH9RKue-tR2JDvtEBIri9Q3Wn1hhFHJdSNUF42A?e=cH5ELe&download=1'),
 ]
 
 download_dir = 'download'
@@ -29,9 +30,13 @@ def download_file_if_not_exists(url, filename=None, download_folder='downloads')
     # Get the filename from the URL
     filename = filename if filename else os.path.basename(url)
     file_path = os.path.join(download_folder, filename)
+    file_is_archive = is_archive(os.path.splitext(filename)[1])
+    archive_outdir = os.path.join(download_folder, os.path.splitext(filename)[0])
+
+    will_download = (not file_is_archive and not os.path.isfile(file_path)) or (file_is_archive and not os.path.exists(os.path.splitext(file_path)[0]))
 
     # Download file if it doesn't exist
-    if not os.path.isfile(file_path):
+    if will_download:
         print(f"Downloading {filename}...")
         try:
             response = requests.get(url, stream=True)
@@ -41,9 +46,8 @@ def download_file_if_not_exists(url, filename=None, download_folder='downloads')
                     f.write(chunk)
             print(f"Downloaded and saved to: {file_path}")
 
-            if(is_archive(os.path.splitext(filename)[1])):
+            if(file_is_archive):
                 try:
-                    archive_outdir = os.path.join(download_folder, os.path.splitext(filename)[0])
                     Path(archive_outdir).mkdir(parents=True, exist_ok=True)
                     print(f"Unpacking archive in: {archive_outdir}")
 
@@ -56,7 +60,7 @@ def download_file_if_not_exists(url, filename=None, download_folder='downloads')
         except requests.RequestException as e:
             print(f"Download failed: {e}")
     else:
-        print(f"File already exists: {file_path}")
+        print(f"Unpacked dir already exists: {archive_outdir}" if file_is_archive  else f"File already exists: {file_path}")
 
     return file_path
 
