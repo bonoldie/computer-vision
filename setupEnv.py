@@ -11,9 +11,6 @@ links = [
     ('dante_dataset.zip', 'https://univr-my.sharepoint.com/:u:/g/personal/enrico_bonoldi_studenti_univr_it/EaWhfmHAH9RKue-tR2JDvtEBIri9Q3Wn1hhFHJdSNUF42A?e=cH5ELe&download=1'),
 ]
 
-download_dir = 'download'
-
-
 def is_archive(extension):
     extension = extension.lower()
     for _, extensions, _ in shutil.get_unpack_formats():

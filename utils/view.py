@@ -24,10 +24,16 @@ def compute_camera_matrix(fx, fy, cx, cy):
     ])
 
 def draw_matches(ref_points, dst_points, img0, img1):
+
+    if type(img0) is str:
+        img0 =  cv2.imread(img0)
+    
+    if type(img1) is str:
+        img1 =  cv2.imread(img1)
     
     # Prepare keypoints and matches for drawMatches function
-    keypoints0 = [cv2.KeyPoint(p[0], p[1], 1000) for p in ref_points]
-    keypoints1 = [cv2.KeyPoint(p[0], p[1], 1000) for p in dst_points]
+    keypoints0 = [cv2.KeyPoint(float(p[0]), float(p[1]), 1000) for p in ref_points]
+    keypoints1 = [cv2.KeyPoint(float(p[0]), float(p[1]), 1000) for p in dst_points]
     matches = [cv2.DMatch(i,i,0) for i in range(len(ref_points))]
 
     # Draw inlier matches
@@ -47,6 +53,8 @@ def view_2D_matches(matches, plot_name='', point_radius=3, bg_image=[]):
     # Use background image if provided
     if isinstance(bg_image, np.ndarray) and bg_image.size > 0:
         image = bg_image.copy()
+    elif isinstance(bg_image, str):
+        image = cv2.imread(bg_image)
     else:
         print("No valid background image provided, using default black image.")
         image = np.zeros((800, 800, 3), dtype=np.uint8)

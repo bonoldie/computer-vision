@@ -54,14 +54,21 @@ def setupLiftFeat():
     return liftfeat
 
 def setupMaste3r():
-    logger.info('Setting up Mast3r...')
-    return AsymmetricMASt3R.from_pretrained('downloads/MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric.pth').to('cpu')
+    pretrained_weights_path = os.path.join(os.getcwd(), 'downloads/MASt3R_ViTLarge_BaseDecoder_512_catmlpdpt_metric.pth')
+    logger.info(f'Setting up Mast3r... (weights: {pretrained_weights_path})')
+    return AsymmetricMASt3R.from_pretrained(pretrained_weights_path).to('cpu')
 
 def setupRoMa():
     logger.info('Setting up RoMa(RoMa outdoor)...')
     return roma_outdoor(device='cpu', coarse_res=int(700), upsample_res=int(840))
 
 def evaluateRDD(reference, target, model=None, cache=True):
+
+    if type(reference) is str:
+        reference =  cv2.imread(reference)
+    
+    if type(target) is str:
+        target =  cv2.imread(target)
     
     if cache:
         logger.info('Checking caches...')
@@ -98,53 +105,151 @@ def evaluateRDD(reference, target, model=None, cache=True):
 
     return res
 
+def evaluateLiftFeat(reference, target, scale_factor=1/3, model=None, cache=True):
+    
+    if type(reference) is str:
+        reference =  cv2.imread(reference)
+    
+    if type(target) is str:
+        target =  cv2.imread(target)
+    
+    if cache:
+        logger.info('Checking caches...')
+        cache_path = os.path.join('.caches', 'LiftFeat', hashlib.sha256(reference.tobytes()).hexdigest() + hashlib.sha256(target.tobytes()).hexdigest() + '.pkl')
 
-def evaluateLiftFeat(reference, target, LF_scale_factor=1/3, model=None):
+        if(Path(cache_path).exists()):
+            logger.success('Returning matches from cache')
+            with open(cache_path, "rb") as cached_file:
+                return pickle.load(cached_file)
+        else:
+            logger.info('No cached result found')
+
     cleanup = False
     if model == None:
         cleanup = True
         model = setupLiftFeat()
 
     ref_H,ref_W = reference.shape[:2]
-    ref_LF = cv2.resize(reference, (round(ref_W*LF_scale_factor),round(ref_H*LF_scale_factor)))
+    ref_LF = cv2.resize(reference, (round(ref_W*scale_factor),round(ref_H*scale_factor)))
 
     target_H,target_W = target.shape[:2]
-    target_LF = cv2.resize(target, (round(target_W*LF_scale_factor),round(target_H*LF_scale_factor)))
+    target_LF = cv2.resize(target, (round(target_W*scale_factor),round(target_H*scale_factor)))
 
     ref_matches, target_matches = model.match_liftfeat(ref_LF, target_LF)
 
-    ref_matches = np.asarray(ref_matches) / LF_scale_factor
-    target_matches = np.asarray(target_matches) / LF_scale_factor
+    ref_matches = np.asarray(ref_matches) / scale_factor
+    target_matches = np.asarray(target_matches) / scale_factor
 
     if cleanup:
         del model
         gc.collect()
     
-    return {
+    res = {
         'reference_matches': ref_matches,
         'target_matches': target_matches
     }
 
-def evaluateMast3r(reference, target, model=None):
-    # TODO implement this
-    pass
+    if cache:
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        with open(cache_path, "wb") as cache_file:
+            pickle.dump(res, cache_file)
+            logger.success('Matches cached')
+
+    return res
+
+def evaluateMast3r(reference, target, model=None, cache=True):
+    reference_path = reference
+    target_path = target
+
+    if type(reference) is not str:
+        reference_path = os.path.join('.tmp/', hashlib.sha256(reference.tobytes()).hexdigest()) 
+        cv2.imwrite(reference_path, reference)
+    else:
+        reference =  cv2.imread(reference)
+
+    if type(target) is not str:
+        target_path = os.path.join('.tmp/', hashlib.sha256(target.tobytes()).hexdigest()) 
+        cv2.imwrite(target_path, target)
+    else:
+        target =  cv2.imread(target)
+
+    if cache:
+        logger.info('Checking caches...')
+        cache_path = os.path.join('.caches', 'Mast3r', hashlib.sha256(reference.tobytes()).hexdigest() + hashlib.sha256(target.tobytes()).hexdigest() + '.pkl')
+
+        if(Path(cache_path).exists()):
+            logger.success('Returning matches from cache')
+            with open(cache_path, "rb") as cached_file:
+                return pickle.load(cached_file)
+        else:
+            logger.info('No cached result found')
+    
+    images = load_images([reference_path, target_path], size=512)
+    
+    cleanup = False
+    if model == None:
+        cleanup = True
+        model = setupMaste3r()
+
+    output = inference([tuple(images)], model, 'cpu', batch_size=1, verbose=False)
+
+    if cleanup:
+        del model
+        gc.collect()
+
+    # at this stage, you have the raw dust3r predictions
+    view1, pred1 = output['view1'], output['pred1']
+    view2, pred2 = output['view2'], output['pred2']
+
+    desc1, desc2 = pred1['desc'].squeeze(0).detach(), pred2['desc'].squeeze(0).detach()
+
+    # find 2D-2D matches between the two images
+    matches_im0, matches_im1 = fast_reciprocal_NNs(desc1, desc2, subsample_or_initxy1=8, device='cpu', dist='dot', block_size=2**13)
+
+    # ignore small border around the edge
+    H0, W0 = view1['true_shape'][0]
+    valid_matches_im0 = (matches_im0[:, 0] >= 3) & (matches_im0[:, 0] < int(W0) - 3) & (
+        matches_im0[:, 1] >= 3) & (matches_im0[:, 1] < int(H0) - 3)
+
+    H1, W1 = view2['true_shape'][0]
+    valid_matches_im1 = (matches_im1[:, 0] >= 3) & (matches_im1[:, 0] < int(W1) - 3) & (
+        matches_im1[:, 1] >= 3) & (matches_im1[:, 1] < int(H1) - 3)
+
+    valid_matches = valid_matches_im0 & valid_matches_im1
+    matches_im0, matches_im1 = matches_im0[valid_matches], matches_im1[valid_matches]
+
+    logger.log('SUCCESS' if len(matches_im0) > 0 else 'WARNING',f'Mast3r returned {len(matches_im0)} matches')
+
+
+    # Images are downscaled by the Mast3r preprocessing so we have to upscale to matches to cover the original image
+    
+    ref_H,ref_W = reference.shape[:2]
+    target_H,target_W = target.shape[:2]  
+
+    matches_im0, matches_im1 = np.asarray(matches_im0), np.asarray(matches_im1)
+    matches_im0[:, 0] = matches_im0[:, 0] * (ref_H / H0.item())
+    matches_im0[:, 1] = matches_im0[:, 1] * (ref_W / W0.item())
+
+    matches_im1[:, 0] = matches_im1[:, 0] * (target_H / H1.item())
+    matches_im1[:, 1] = matches_im1[:, 1] * (target_W / W1.item())
+
+    res = {
+        'reference_matches': matches_im0,
+        'target_matches': matches_im1
+    }
+
+    if cache:
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        with open(cache_path, "wb") as cache_file:
+            pickle.dump(res, cache_file)
+            logger.success('Matches cached')
+
+    return res
+    
 
 def evaluateRoMa():
     # TODO implement this
     pass
-
-def draw_matches(ref_points, dst_points, img0, img1):
-    
-    # Prepare keypoints and matches for drawMatches function
-    keypoints0 = [cv2.KeyPoint(p[0], p[1], 1000) for p in ref_points]
-    keypoints1 = [cv2.KeyPoint(p[0], p[1], 1000) for p in dst_points]
-    matches = [cv2.DMatch(i,i,0) for i in range(len(ref_points))]
-
-    # Draw inlier matches
-    img_matches = cv2.drawMatches(img0, keypoints0, img1, keypoints1, matches, None,
-                                  matchColor=(0, 255, 0), flags=2)
-
-    return img_matches
 
 # if __name__ == '__main__':
 #     # Load visibility map
