@@ -44,7 +44,7 @@ def draw_matches(ref_points, dst_points, img0, img1):
 
 
 
-def view_2D_matches(matches, plot_name='', point_radius=3, bg_image=[], show=True):
+def view_2D_matches(matches, plot_name='', point_radius=3, bg_image=[], show=True, color = (0,0,255)):
 
     matches = np.asarray(matches)
     if matches.shape[1] != 2:
@@ -68,7 +68,7 @@ def view_2D_matches(matches, plot_name='', point_radius=3, bg_image=[], show=Tru
         x, y = point
         if 0 <= x < img_w and 0 <= y < img_h:
             cv2.circle(image, (x, y), radius=point_radius,
-                       color=(0, 0, 255), thickness=-1)
+                       color=color, thickness=-1)
         else:
             pass
            # print(f"[view_2D_matches] Point {point} is out of bounds for the image size {image.shape[:2]}.")

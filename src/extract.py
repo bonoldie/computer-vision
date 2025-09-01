@@ -162,13 +162,13 @@ def evaluateMast3r(reference, target, model=None, cache=True):
     target_path = target
 
     if type(reference) is not str:
-        reference_path = os.path.join('.tmp/', hashlib.sha256(reference.tobytes()).hexdigest()) 
+        reference_path = os.path.join('.tmp/', hashlib.sha256(reference.tobytes()).hexdigest() + '.jpg') 
         cv2.imwrite(reference_path, reference)
     else:
         reference =  cv2.imread(reference)
 
     if type(target) is not str:
-        target_path = os.path.join('.tmp/', hashlib.sha256(target.tobytes()).hexdigest()) 
+        target_path = os.path.join('.tmp/', hashlib.sha256(target.tobytes()).hexdigest() + '.jpg') 
         cv2.imwrite(target_path, target)
     else:
         target =  cv2.imread(target)
