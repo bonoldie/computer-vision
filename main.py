@@ -92,14 +92,10 @@ if __name__ == '__main__':
     # extracting 2D matches
 
     extraction_matching_result = dict()
-    extraction_matching_result['RDD'] = evaluateRDD(
-        reference, target)
-    extraction_matching_result['LiftFeat'] = evaluateLiftFeat(
-        reference, target)
-    extraction_matching_result['Mast3r'] = evaluateMast3r(
-        reference, target)
+    extraction_matching_result['RDD'] = evaluateRDD(reference, target)
+    extraction_matching_result['LiftFeat'] = evaluateLiftFeat(reference, target)
+    extraction_matching_result['Mast3r'] = evaluateMast3r(reference, target)
 
-    
     # 2D-2D matches to 2D-3D matches
 
     for extractor in extraction_matching_result.keys():
@@ -196,7 +192,7 @@ if __name__ == '__main__':
         # logger.info(filtered_target_3D_matches.shape)
 
         is_target_pose_ok, target_rvec_estimated, target_t_estimated, inliers = cv2.solvePnPRansac(
-            filtered_target_3D_matches, filtered_target_matches, cameraMatrix=target_K, distCoeffs=dist_coeffs, reprojectionError=40, iterationsCount=100000,  flags=cv2.SOLVEPNP_ITERATIVE)
+            filtered_target_3D_matches, filtered_target_matches, cameraMatrix=target_K, distCoeffs=dist_coeffs, reprojectionError=60, iterationsCount=100000,  flags=cv2.SOLVEPNP_P3P)
 
         target_3D_inliers = filtered_target_3D_matches[inliers, :]
         target_3D_inliers = target_3D_inliers.squeeze()
@@ -211,22 +207,24 @@ if __name__ == '__main__':
         target_T_estimated[:3, :3] = target_R_estimated
         target_T_estimated[:3, 3] = target_t_estimated.flatten()
 
-        logger.success(f"pose estimation completed") if is_target_pose_ok else logger.error(
-            'pose estimation failed')
+        logger.success(f"pose estimation completed") if is_target_pose_ok else logger.error('pose estimation failed')
 
         target_estimated_reproj, _ = cv2.projectPoints(
-            target_3D_feature_points, target_rvec_estimated, target_t_estimated, cameraMatrix=reference_K, distCoeffs=dist_coeffs)
+            pc_points, target_rvec_estimated, target_t_estimated, cameraMatrix=reference_K, distCoeffs=dist_coeffs)
         target_estimated_reproj = target_estimated_reproj.squeeze()
         
         # print([matches['target_matches'].shape, target_estimated_reproj.shape])
         
-        chamfer_error = chamfer_distance(target_2D_feature_points, target_estimated_reproj)
-        hausdorff_error = hausdorff_distance(target_2D_feature_points, target_estimated_reproj)
-        symmetric_partial_rmse_error = symmetric_partial_rmse(target_2D_feature_points, target_estimated_reproj)
-        log_se3_error = log_se3(target_T @ np.linalg.inv(target_T_estimated))
+        if False:
+            # Compute and print errors
+            chamfer_error = chamfer_distance(target_2D_feature_points, target_estimated_reproj)
+            hausdorff_error = hausdorff_distance(target_2D_feature_points, target_estimated_reproj)
+            symmetric_partial_rmse_error = symmetric_partial_rmse(target_2D_feature_points, target_estimated_reproj)
 
+            log_se3_error = log_se3(target_T @ np.linalg.inv(target_T_estimated))
+            logger.info(f'\nErrors ({extractor}):\n    chamfer: {chamfer_error}\n    hausdorff: {hausdorff_error}\n    symmetric partial RMSE: {symmetric_partial_rmse_error}\n    log_se3: {log_se3_error}\n    log_se3 norm: {np.linalg.norm(log_se3_error)}')
 
-        logger.info(f'\nErrors ({extractor}):\n    chamfer: {chamfer_error}\n    hausdorff: {hausdorff_error}\n    symmetric partial RMSE: {symmetric_partial_rmse_error}\n    log_se3: {log_se3_error}')
+        # logger.info(f'Mean distance ({extractor}): {np.linalg.norm(np.mean(target_2D_feature_points - target_estimated_reproj, axis=0))}')
 
         # print(target_T)
         # print(np.linalg.inv(target_T))
@@ -260,7 +258,7 @@ if __name__ == '__main__':
 
         # geometries.append(frame_label)
 
-    if True:
+    if False:
         # shows poses in Open3D
         camera = dante_scene_widget.scene.camera
         camera.look_at([0, 1, 0], np.linalg.inv(target_T)[:3, 3], np.linalg.inv(target_R)[:3, 2])
