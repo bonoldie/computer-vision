@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     # loads media
     reference_image = '_SAM1005.JPG'
-    target_image = '_SAM1007.JPG'
+    target_image = '_SAM1008.JPG'
 
     reference_image_path = f'downloads/dante_dataset/dante_dataset/photos/{reference_image}'
     target_image_path = f'downloads/dante_dataset/dante_dataset/photos/{target_image}'
@@ -115,11 +115,10 @@ if __name__ == '__main__':
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
-
-        reference_2D_feature_points_to_extractor_matches_distance = cdist(
-            matches['reference_matches'], reference_2D_feature_points)
-        indexes = np.argmin(
-            reference_2D_feature_points_to_extractor_matches_distance, axis=1)
+        # reference_2D_feature_points_to_extractor_matches_distance = cdist(
+        #     matches['reference_matches'], reference_2D_feature_points)
+        # indexes = np.argmin(
+        #     reference_2D_feature_points_to_extractor_matches_distance, axis=1)
 
         filtered_indexes = []
 
@@ -127,20 +126,75 @@ if __name__ == '__main__':
         filtered_target_matches = []
         filtered_target_3D_matches = []
 
-        logger.debug(
-            reference_2D_feature_points_to_extractor_matches_distance.shape)
+        # logger.debug(
+        #     reference_2D_feature_points_to_extractor_matches_distance.shape)
 
-        for match_idx, feat_idx in enumerate(indexes.tolist()):
-            # since the 2D-2D matches to features on the reference images may be not even close we filter them base on the euclidean norm
-            # this is useful even when using the solvePnP with RANSAC
-            if (reference_2D_feature_points_to_extractor_matches_distance[match_idx, feat_idx] < 100):
+        logger.debug(matches['reference_matches'].shape)
+
+        reference_2D_matches = matches['reference_matches'].copy()
+        target_2D_matches = matches['target_matches'].copy()
+        
+        reference_distances = cdist(reference_2D_feature_points, reference_2D_matches)
+
+        min_dist_feature_idx = np.argmin(reference_distances, axis=1)
+        min_dist_match_idx = np.argmin(reference_distances, axis=0)
+
+        for feat_idx, match_idx in enumerate(min_dist_feature_idx):
+            if(min_dist_match_idx[match_idx] == feat_idx) and reference_distances[feat_idx, match_idx] < 10000000:
+                       #  if(reference_2D_feature_point_distances[:, match_idx] < 100): 
                 filtered_indexes.append([match_idx, feat_idx])
-                filtered_reference_matches.append(
-                    matches['reference_matches'][match_idx, :])
-                filtered_target_matches.append(
-                    matches['target_matches'][match_idx, :])
-                filtered_target_3D_matches.append(
-                    pc_points[reference_visibility[feat_idx]['index']])
+                filtered_reference_matches.append(reference_2D_matches[match_idx, :])
+                filtered_target_matches.append(target_2D_matches[match_idx, :])
+                filtered_target_3D_matches.append(pc_points[reference_visibility[feat_idx]['index']])
+
+        if False:
+            # show the matches
+            canvas = draw_matches(filtered_reference_matches, filtered_target_matches, reference, target)
+ 
+            cv2.namedWindow(f"{extractor} filtered matches", cv2.WINDOW_NORMAL)
+            cv2.resizeWindow(f"{extractor} filtered matches", 800, 600)
+            cv2.imshow(f"{extractor} filtered matches", canvas)
+
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+
+        
+        
+        # for feat_idx, reference_2D_feature_point in enumerate(reference_2D_feature_points):
+        #     feature_to_match_dist = cdist(np.array([reference_2D_feature_point]), reference_2D_matches)
+        #     match_to_feature_dist = cdist(reference_2D_matches, np.array([reference_2D_feature_point]))
+
+        #     match_idx = np.argmin(reference_2D_feature_point_distances, axis=1)[0]
+            
+        #     logger.info(reference_2D_feature_point_distances.shape)
+        #     logger.info(match_idx)
+
+        #     if(reference_2D_feature_point_distances[:, match_idx] < 100): 
+        #         filtered_indexes.append([match_idx, feat_idx])
+        #         filtered_reference_matches.append(reference_2D_matches[match_idx, :])
+        #         filtered_target_matches.append(target_2D_matches[match_idx, :])
+        #         filtered_target_3D_matches.append(pc_points[reference_visibility[feat_idx]['index']])
+
+        #         target_2D_matches = np.delete(target_2D_matches, match_idx, axis=0)
+        #         reference_2D_matches = np.delete(reference_2D_matches, match_idx, axis=0)
+
+        #     logger.info(reference_2D_matches.shape)
+            
+
+           
+        # for       matches['reference_matches']
+
+        # for match_idx, feat_idx in enumerate(indexes.tolist()):
+        #     # since the 2D-2D matches to features on the reference images may be not even close we filter them base on the euclidean norm
+        #     # this is useful even when using the solvePnP with RANSAC
+        #     if (reference_2D_feature_points_to_extractor_matches_distance[match_idx, feat_idx] < 100):
+        #         filtered_indexes.append([match_idx, feat_idx])
+        #         filtered_reference_matches.append(
+        #             matches['reference_matches'][match_idx, :])
+        #         filtered_target_matches.append(
+        #             matches['target_matches'][match_idx, :])
+        #         filtered_target_3D_matches.append(
+        #             pc_points[reference_visibility[feat_idx]['index']])
             
         if False:
             extractor_filtered_canvas = draw_matches(
@@ -152,7 +206,7 @@ if __name__ == '__main__':
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
-        if False:
+        if True:
             # shows reference matches grouped by feature point
 
             bg = view_2D_matches(reference_2D_feature_points, 'Grouped matches',
@@ -192,7 +246,10 @@ if __name__ == '__main__':
         # logger.info(filtered_target_3D_matches.shape)
 
         is_target_pose_ok, target_rvec_estimated, target_t_estimated, inliers = cv2.solvePnPRansac(
-            filtered_target_3D_matches, filtered_target_matches, cameraMatrix=target_K, distCoeffs=dist_coeffs, reprojectionError=60, iterationsCount=100000,  flags=cv2.SOLVEPNP_P3P)
+            filtered_target_3D_matches, filtered_target_matches, cameraMatrix=target_K, distCoeffs=dist_coeffs, reprojectionError=30, iterationsCount=100000,  flags=cv2.SOLVEPNP_P3P)
+
+        logger.success(f"Inliers ({extractor}): {(inliers.shape[0]/filtered_target_matches.shape[0]) * 100}%")
+
 
         target_3D_inliers = filtered_target_3D_matches[inliers, :]
         target_3D_inliers = target_3D_inliers.squeeze()
@@ -210,34 +267,84 @@ if __name__ == '__main__':
         logger.success(f"pose estimation completed") if is_target_pose_ok else logger.error('pose estimation failed')
 
         target_estimated_reproj, _ = cv2.projectPoints(
-            pc_points, target_rvec_estimated, target_t_estimated, cameraMatrix=reference_K, distCoeffs=dist_coeffs)
+            filtered_target_3D_matches, target_rvec_estimated, target_t_estimated, cameraMatrix=reference_K, distCoeffs=dist_coeffs)
         target_estimated_reproj = target_estimated_reproj.squeeze()
         
         # print([matches['target_matches'].shape, target_estimated_reproj.shape])
         
-        if False:
+        if True:
             # Compute and print errors
             chamfer_error = chamfer_distance(target_2D_feature_points, target_estimated_reproj)
             hausdorff_error = hausdorff_distance(target_2D_feature_points, target_estimated_reproj)
+            hausdorff_error_inliers = hausdorff_distance(target_2D_matches_inliers, target_estimated_reproj[inliers].squeeze())
             symmetric_partial_rmse_error = symmetric_partial_rmse(target_2D_feature_points, target_estimated_reproj)
 
+            symmetric_partial_rmse_error_inliers = symmetric_partial_rmse(target_2D_matches_inliers, target_estimated_reproj[inliers].squeeze())
+
             log_se3_error = log_se3(target_T @ np.linalg.inv(target_T_estimated))
-            logger.info(f'\nErrors ({extractor}):\n    chamfer: {chamfer_error}\n    hausdorff: {hausdorff_error}\n    symmetric partial RMSE: {symmetric_partial_rmse_error}\n    log_se3: {log_se3_error}\n    log_se3 norm: {np.linalg.norm(log_se3_error)}')
+            logger.info(f'\nErrors ({extractor}):\n    chamfer: {chamfer_error}\n    hausdorff: {hausdorff_error}\n    hausdorff (inliers only): {hausdorff_error_inliers}\n    symmetric partial RMSE: {symmetric_partial_rmse_error}\n    symmetric partial RMSE (inliers only): {symmetric_partial_rmse_error_inliers}\n    log_se3: {log_se3_error}\n    log_se3 norm: {np.linalg.norm(log_se3_error)}')
 
-        # logger.info(f'Mean distance ({extractor}): {np.linalg.norm(np.mean(target_2D_feature_points - target_estimated_reproj, axis=0))}')
-
+       
         # print(target_T)
         # print(np.linalg.inv(target_T))
         # print(target_T_estimated)
         # print(np.linalg.inv(target_T_estimated))
 
         if True:
-            img = view_2D_matches(target_2D_feature_points, f'Target estimated reprojection ({extractor})', bg_image=target, show=False, color=(0,255,0))
+            logger.debug(filtered_target_matches.shape)
+            logger.debug(target_estimated_reproj.shape)
+            img = view_2D_matches(filtered_target_matches, f'Target estimated reprojection ({extractor})', bg_image=target, show=False, color=(0,255,0))
+            
+            target_original_idx = 0
+            for target_reprojected_point in target_estimated_reproj:
+                color = (0, 0, 255)
+
+                # logger.info(target_reprojected_point)
+
+                cv2.line(img,
+                         (
+                            int(target_reprojected_point[0]),
+                            int(target_reprojected_point[1])
+                        ), (
+                            int(filtered_target_matches[target_original_idx, 0]),
+                            int(filtered_target_matches[target_original_idx, 1])
+                        ),
+                    color=tuple(color),
+                    thickness=2
+                )
+                target_original_idx += 1 
+            
             view_2D_matches(target_estimated_reproj, f'Target estimated reprojection ({extractor})', bg_image=img)
             
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
+        if True:
+            img = view_2D_matches(target_2D_matches_inliers, f'Target estimated reprojection ({extractor})', bg_image=target, show=False, color=(0,255,0))
+            
+            target_original_idx = 0
+
+            for target_reprojected_point in target_estimated_reproj[inliers].squeeze():
+                color = (0, 0, 255)
+                # logger.info(target_reprojected_point)
+
+                cv2.line(img,
+                         (
+                            int(target_reprojected_point[0]),
+                            int(target_reprojected_point[1])
+                        ), (
+                            int(target_2D_matches_inliers[target_original_idx, 0]),
+                            int(target_2D_matches_inliers[target_original_idx, 1])
+                        ),
+                    color=tuple(color),
+                    thickness=2
+                )
+                target_original_idx += 1 
+            
+            view_2D_matches(target_estimated_reproj, f'Target estimated reprojection ({extractor})', bg_image=img)
+            
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
         # Open3D geometries
         target_camera_axis_estimated = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.3)
@@ -258,7 +365,7 @@ if __name__ == '__main__':
 
         # geometries.append(frame_label)
 
-    if False:
+    if True:
         # shows poses in Open3D
         camera = dante_scene_widget.scene.camera
         camera.look_at([0, 1, 0], np.linalg.inv(target_T)[:3, 3], np.linalg.inv(target_R)[:3, 2])
