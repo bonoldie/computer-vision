@@ -7,7 +7,6 @@ Tested feature-matching NN:
 - [RDD](https://github.com/xtcpete/rdd) 
 - [LiftFeat](https://github.com/lyp-deeplearning/LiftFeat)
 - [Mast3r](https://github.com/naver/mast3r)
-- [RoMa](https://github.com/Vincentqyw/RoMa)
 
 ## Reference and target images
 
@@ -24,7 +23,6 @@ We selected two images(reference and target respectively) and then ran each neur
 
 | Model    | Total matches |
 | -------- | ------------- |
-| RoMa     | 10000         |
 | Mast3r   | 1445          |
 | LiftFeat | 28523         |
 | RDD      | 1837          |
