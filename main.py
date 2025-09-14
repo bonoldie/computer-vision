@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     # loads media
     reference_image = '_SAM1005.JPG'
-    target_image = '_SAM1008.JPG'
+    target_image = '_SAM1007.JPG'
 
     reference_image_path = f'downloads/dante_dataset/dante_dataset/photos/{reference_image}'
     target_image_path = f'downloads/dante_dataset/dante_dataset/photos/{target_image}'
@@ -104,9 +104,10 @@ if __name__ == '__main__':
         # select the matches for the current extractor
         matches = extraction_matching_result[extractor]
 
-        if False:
+        if True:
             # show the matches
-            canvas = draw_matches(matches['reference_matches'], matches['target_matches'], reference, target)
+            idx = np.random.choice(matches['reference_matches'].shape[0], size=40, replace=False)
+            canvas = draw_matches(matches['reference_matches'][idx, ::-1], matches['target_matches'][idx, ::-1], cv2.rotate(reference, cv2.ROTATE_90_COUNTERCLOCKWISE) , cv2.rotate(target, cv2.ROTATE_90_COUNTERCLOCKWISE))
  
             cv2.namedWindow(f"{extractor} matches", cv2.WINDOW_NORMAL)
             cv2.resizeWindow(f"{extractor} matches", 800, 600)
@@ -139,9 +140,15 @@ if __name__ == '__main__':
         min_dist_feature_idx = np.argmin(reference_distances, axis=1)
         min_dist_match_idx = np.argmin(reference_distances, axis=0)
 
+        # print(reference_distances.shape)
+        # print(reference_2D_matches.shape)
+
+        # print(min_dist_feature_idx.shape)
+        # print(min_dist_match_idx.shape)
+
         for feat_idx, match_idx in enumerate(min_dist_feature_idx):
-            if(min_dist_match_idx[match_idx] == feat_idx) and reference_distances[feat_idx, match_idx] < 10000000:
-                       #  if(reference_2D_feature_point_distances[:, match_idx] < 100): 
+            if(min_dist_match_idx[match_idx] == feat_idx) and reference_distances[feat_idx, match_idx] < 100000000000000:
+                #  if(reference_2D_feature_point_distances[:, match_idx] < 100): 
                 filtered_indexes.append([match_idx, feat_idx])
                 filtered_reference_matches.append(reference_2D_matches[match_idx, :])
                 filtered_target_matches.append(target_2D_matches[match_idx, :])
@@ -157,8 +164,6 @@ if __name__ == '__main__':
 
             cv2.waitKey(0)
             cv2.destroyAllWindows()
-
-        
         
         # for feat_idx, reference_2D_feature_point in enumerate(reference_2D_feature_points):
         #     feature_to_match_dist = cdist(np.array([reference_2D_feature_point]), reference_2D_matches)
@@ -232,6 +237,7 @@ if __name__ == '__main__':
                 )
 
             cv2.namedWindow(f'{extractor} grouped matches', cv2.WINDOW_KEEPRATIO)
+            cv2.imwrite('report/assets/RDD_filtered_matches.jpg',bg)
             cv2.imshow(f'{extractor} grouped matches', bg)
             cv2.resizeWindow(f'{extractor} grouped matches', img_w // 2, img_h // 2)
             cv2.waitKey(0)
@@ -250,25 +256,37 @@ if __name__ == '__main__':
 
         logger.success(f"Inliers ({extractor}): {(inliers.shape[0]/filtered_target_matches.shape[0]) * 100}%")
 
+        is_target_pose_ok_noRansac, target_rvec_estimated_noRANSAC, target_t_estimated_noRANSAC = cv2.solvePnP(
+            filtered_target_3D_matches, filtered_target_matches, cameraMatrix=target_K, distCoeffs=dist_coeffs, flags=cv2.SOLVEPNP_ITERATIVE)
 
         target_3D_inliers = filtered_target_3D_matches[inliers, :]
         target_3D_inliers = target_3D_inliers.squeeze()
         target_2D_matches_inliers = filtered_target_matches[inliers, :]
         target_2D_matches_inliers = target_2D_matches_inliers.squeeze()
         
-        print(target_3D_inliers.shape)
-        print(target_2D_matches_inliers.shape)
+        logger.success(f"Ransac pose estimation completed") if is_target_pose_ok else logger.error('Ransac pose estimation failed')
+        logger.info(f"inliers: {target_3D_inliers.shape[0]}")
 
+        logger.success(f"Pose estimation completed") if is_target_pose_ok_noRansac else logger.error('Pose estimation failed')
+        
         target_R_estimated, _ = cv2.Rodrigues(target_rvec_estimated)
         target_T_estimated = np.identity(4)
         target_T_estimated[:3, :3] = target_R_estimated
         target_T_estimated[:3, 3] = target_t_estimated.flatten()
 
-        logger.success(f"pose estimation completed") if is_target_pose_ok else logger.error('pose estimation failed')
+        target_R_estimated_noRANSAC, _ = cv2.Rodrigues(target_rvec_estimated_noRANSAC)
+        target_T_estimated_noRANSAC = np.identity(4)
+        target_T_estimated_noRANSAC[:3, :3] = target_R_estimated_noRANSAC
+        target_T_estimated_noRANSAC[:3, 3] = target_t_estimated_noRANSAC.flatten()
+
 
         target_estimated_reproj, _ = cv2.projectPoints(
             filtered_target_3D_matches, target_rvec_estimated, target_t_estimated, cameraMatrix=reference_K, distCoeffs=dist_coeffs)
         target_estimated_reproj = target_estimated_reproj.squeeze()
+
+        target_estimated_reproj_noRANSAC, _ = cv2.projectPoints(
+            filtered_target_3D_matches, target_rvec_estimated_noRANSAC, target_t_estimated_noRANSAC, cameraMatrix=reference_K, distCoeffs=dist_coeffs)
+        target_estimated_reproj_noRANSAC = target_estimated_reproj_noRANSAC.squeeze()
         
         # print([matches['target_matches'].shape, target_estimated_reproj.shape])
         
@@ -282,9 +300,18 @@ if __name__ == '__main__':
             symmetric_partial_rmse_error_inliers = symmetric_partial_rmse(target_2D_matches_inliers, target_estimated_reproj[inliers].squeeze())
 
             log_se3_error = log_se3(target_T @ np.linalg.inv(target_T_estimated))
-            logger.info(f'\nErrors ({extractor}):\n    chamfer: {chamfer_error}\n    hausdorff: {hausdorff_error}\n    hausdorff (inliers only): {hausdorff_error_inliers}\n    symmetric partial RMSE: {symmetric_partial_rmse_error}\n    symmetric partial RMSE (inliers only): {symmetric_partial_rmse_error_inliers}\n    log_se3: {log_se3_error}\n    log_se3 norm: {np.linalg.norm(log_se3_error)}')
+            logger.info(f'\nErrors ({extractor} w\RANSAC):\n    chamfer: {chamfer_error}\n    hausdorff: {hausdorff_error}\n    hausdorff (inliers only): {hausdorff_error_inliers}\n    symmetric partial RMSE: {symmetric_partial_rmse_error}\n    symmetric partial RMSE (inliers only): {symmetric_partial_rmse_error_inliers}\n    log_se3: {log_se3_error}\n    log_se3 norm: {np.linalg.norm(log_se3_error)}')
 
-       
+
+        if True:
+            # Compute and print errors (no RANSAC pose)
+            chamfer_error = chamfer_distance(target_2D_feature_points, target_estimated_reproj_noRANSAC)
+            hausdorff_error = hausdorff_distance(target_2D_feature_points, target_estimated_reproj_noRANSAC)
+            symmetric_partial_rmse_error = symmetric_partial_rmse(target_2D_feature_points, target_estimated_reproj_noRANSAC)
+
+            log_se3_error = log_se3(target_T @ np.linalg.inv(target_T_estimated_noRANSAC))
+            logger.info(f'\nErrors ({extractor}):\n    chamfer: {chamfer_error}\n    hausdorff: {hausdorff_error}\n    symmetric partial RMSE: {symmetric_partial_rmse_error}\n    log_se3: {log_se3_error}\n    log_se3 norm: {np.linalg.norm(log_se3_error)}')
+
         # print(target_T)
         # print(np.linalg.inv(target_T))
         # print(target_T_estimated)
@@ -351,17 +378,32 @@ if __name__ == '__main__':
         target_camera_axis_estimated.transform(np.linalg.inv(target_T_estimated))
         frustum_target_estimated, _ = create_camera_frustum(camera_intrinsics, np.linalg.inv(target_T_estimated), reference)
 
+        target_camera_axis_estimated_noRANSAC = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.3)
+        target_camera_axis_estimated_noRANSAC.transform(np.linalg.inv(target_T_estimated_noRANSAC))
+        frustum_target_estimated_noRANSAC, _ = create_camera_frustum(camera_intrinsics, np.linalg.inv(target_T_estimated_noRANSAC), reference)
+
+        
+
         # frame_label = o3d.visualization.gui.Label3D(extractor, target_t_estimated)
 
-        geometries.append(target_camera_axis_estimated)
-        geometries.append(frustum_target_estimated)
-        
+        # geometries.append(target_camera_axis_estimated)
+        # geometries.append(frustum_target_estimated)
+        # 
+        # geometries.append(target_camera_axis_estimated_noRANSAC)
+        # geometries.append(frustum_target_estimated_noRANSAC)
+
         # label = gui.Label3D(extractor)
-        label = dante_scene_widget.add_3d_label(np.linalg.inv(target_T_estimated)[:3, 3], extractor)
+        label = dante_scene_widget.add_3d_label(np.linalg.inv(target_T_estimated)[:3, 3], f"{extractor}(RANSAC)")
         label.scale = 1.0
 
-        dante_scene_widget.scene.add_geometry(f"{extractor} estimated target camera axis", target_camera_axis_estimated, rendering.MaterialRecord())
-        dante_scene_widget.scene.add_geometry(f"{extractor} estimated target camera frustum", frustum_target_estimated, rendering.MaterialRecord())
+        label_noRANSAC = dante_scene_widget.add_3d_label(np.linalg.inv(target_T_estimated_noRANSAC)[:3, 3],extractor)
+        label_noRANSAC.scale = 1.0
+
+        dante_scene_widget.scene.add_geometry(f"{extractor} estimated target camera axis w/RANSAC", target_camera_axis_estimated, rendering.MaterialRecord())
+        dante_scene_widget.scene.add_geometry(f"{extractor} estimated target camera frustum w/RANSAC", frustum_target_estimated, rendering.MaterialRecord())
+
+        dante_scene_widget.scene.add_geometry(f"{extractor} estimated target camera axis", target_camera_axis_estimated_noRANSAC, rendering.MaterialRecord())
+        dante_scene_widget.scene.add_geometry(f"{extractor} estimated target camera frustum", frustum_target_estimated_noRANSAC, rendering.MaterialRecord())
 
         # geometries.append(frame_label)
 
