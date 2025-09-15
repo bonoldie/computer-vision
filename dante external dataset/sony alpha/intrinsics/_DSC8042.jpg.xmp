@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<camera name="_DSC8042.jpg">
+    <calibration cameraMaker="SONY" cameraModel="ILCE-6300" lense="30.0 mm - Lens E PZ 18-105mm F4 G OSS" ccdwidth="18.5767498016" w="3162" h="4743" fx="6588.77430373" fy="6588.77430373" cx="1695.08177915" cy="2319.25810472" k1="0" k2="0" p1="0" p2="0" k3="0" skew="0" name=""/>
+    <extrinsics>
+        <rotation rowMajor="1">0 -0.996574119577 0.0827044387559 -0.160726352581 -0.0816291989168 -0.983617666306 0.986999006882 -0.0132927827835 -0.160175723316</rotation>
+        <translation>-9.91308238533 4.35514787616 89.1572263293</translation>
+    </extrinsics>
+</camera>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<camera name="_DSC8047.jpg">
+    <calibration cameraMaker="SONY" cameraModel="ILCE-6300" lense="91.0 mm - Lens E PZ 18-105mm F4 G OSS" ccdwidth="18.5767498016" w="3162" h="4743" fx="19963.9808005" fy="19963.9808005" cx="1655.34745957" cy="2949.10019942" k1="0" k2="0" p1="0" p2="0" k3="0" skew="0" name=""/>
+    <extrinsics>
+        <rotation rowMajor="1">0.48197678052 -0.876098038641 0.0122723155568 0.197764292462 0.0951316475715 -0.975622495772 0.853573469402 0.472654415318 0.219112153961</rotation>
+        <translation>1.67197057396 13.0645138267 25.7698804654</translation>
+    </extrinsics>
+</camera>

@@ -18,6 +18,9 @@ from scipy.spatial.distance import cdist
 from loguru import logger
 logger.add('logs/log_{time}.log', compression='zip', rotation='1 hour')
 
+vertical_image=True
+print_images=True
+
 if __name__ == '__main__':
     visibility_map_path = 'downloads/dante_rework/Visibility.txt'
     logger.info(f'Loading visibility map ({visibility_map_path})')
@@ -48,13 +51,18 @@ if __name__ == '__main__':
     target = cv2.rotate(cv2.imread(target_image_path), cv2.ROTATE_90_CLOCKWISE)
 
     reference_visibility = visibility_map[reference_image]
-    target_visibility = visibility_map[target_image]
     reference_2D_feature_points = np.asarray([*map(lambda vis_entry: [vis_entry['w'], vis_entry['h']], reference_visibility)])
     reference_2D_feature_points = reference_2D_feature_points[:, ::-1]
 
-    target_2D_feature_points = np.asarray([*map(lambda vis_entry: [vis_entry['w'], vis_entry['h']], target_visibility)])
-    target_2D_feature_points = target_2D_feature_points[:, ::-1]
-    target_3D_feature_points = np.asarray([*map(lambda vis_entry: pc_points[vis_entry['index'], :], target_visibility)])
+    #check if target visibility is available (target image may not be in dataset)
+    if target_image in visibility_map:
+        target_visibility = visibility_map[target_image]
+        target_2D_feature_points = np.asarray([*map(lambda vis_entry: [vis_entry['w'], vis_entry['h']], target_visibility)])
+        target_2D_feature_points = target_2D_feature_points[:, ::-1]
+    else:
+        target_2D_feature_points=None
+    
+    #target_3D_feature_points = np.asarray([*map(lambda vis_entry: pc_points[vis_entry['index'], :], target_visibility)])
 
 
     # Open3D section
@@ -94,7 +102,7 @@ if __name__ == '__main__':
     extraction_matching_result = dict()
     extraction_matching_result['RDD'] = evaluateRDD(reference, target)
     extraction_matching_result['LiftFeat'] = evaluateLiftFeat(reference, target)
-    extraction_matching_result['Mast3r'] = evaluateMast3r(reference, target)
+    extraction_matching_result['Mast3r'] = evaluateMast3r(target_image_path, target_image_path)
 
     # 2D-2D matches to 2D-3D matches
 
@@ -106,14 +114,27 @@ if __name__ == '__main__':
 
         if True:
             # show the matches
-            idx = np.random.choice(matches['reference_matches'].shape[0], size=40, replace=False)
-            canvas = draw_matches(matches['reference_matches'][idx, ::-1], matches['target_matches'][idx, ::-1], cv2.rotate(reference, cv2.ROTATE_90_COUNTERCLOCKWISE) , cv2.rotate(target, cv2.ROTATE_90_COUNTERCLOCKWISE))
- 
+            #idx = np.random.choice(matches['reference_matches'].shape[0], size=400, replace=False)
+            #canvas = draw_matches(matches['reference_matches'][idx, ::-1], matches['target_matches'][idx, ::-1], cv2.rotate(reference, cv2.ROTATE_90_COUNTERCLOCKWISE) , cv2.rotate(target, cv2.ROTATE_90_COUNTERCLOCKWISE))
+            
+            #WARNING if you rotate counter clockwise it is not sufficent to just flip the coordinate axes, but the prev x axis must be (img_width-idx)
+            if vertical_image:
+                canvas = draw_matches(
+                np.column_stack((np.array(matches['reference_matches'])[:,1], reference.shape[1] - np.array(matches['reference_matches'])[:,0])),
+                np.column_stack((matches['target_matches'][:,1], target.shape[1] - matches['target_matches'][:,0])),
+                cv2.rotate(reference, cv2.ROTATE_90_COUNTERCLOCKWISE),
+                cv2.rotate(target, cv2.ROTATE_90_COUNTERCLOCKWISE))
+                
+            else:   
+                canvas = draw_matches(np.array(matches['reference_matches']), np.array(matches['target_matches']), reference, target)
+                
             cv2.namedWindow(f"{extractor} matches", cv2.WINDOW_NORMAL)
             cv2.resizeWindow(f"{extractor} matches", 800, 600)
             cv2.imshow(f"{extractor} matches", canvas)
 
             cv2.waitKey(0)
+            if print_images:
+                cv2.imwrite(f"report/assets/{extractor} matches.png", canvas)
             cv2.destroyAllWindows()
 
         # reference_2D_feature_points_to_extractor_matches_distance = cdist(
@@ -137,7 +158,9 @@ if __name__ == '__main__':
         
         reference_distances = cdist(reference_2D_feature_points, reference_2D_matches)
 
+        # contain the index of the closest match point for every vis. map point
         min_dist_feature_idx = np.argmin(reference_distances, axis=1)
+        # contain the index of the closest vis. map point, for every match point (usually match point > vis map point)
         min_dist_match_idx = np.argmin(reference_distances, axis=0)
 
         # print(reference_distances.shape)
@@ -145,74 +168,48 @@ if __name__ == '__main__':
 
         # print(min_dist_feature_idx.shape)
         # print(min_dist_match_idx.shape)
-
+        
+        #take the min distance index of every feature point (vis. map point) from it's match point 
         for feat_idx, match_idx in enumerate(min_dist_feature_idx):
+            # i want to know if the closest match from current feature is also the closest feature from that match (bidirectional check)
             if(min_dist_match_idx[match_idx] == feat_idx) and reference_distances[feat_idx, match_idx] < 100000000000000:
                 #  if(reference_2D_feature_point_distances[:, match_idx] < 100): 
                 filtered_indexes.append([match_idx, feat_idx])
                 filtered_reference_matches.append(reference_2D_matches[match_idx, :])
                 filtered_target_matches.append(target_2D_matches[match_idx, :])
+                #here i retrieve the 3D coordinate of the points that passed the filtering
                 filtered_target_3D_matches.append(pc_points[reference_visibility[feat_idx]['index']])
 
-        if False:
-            # show the matches
-            canvas = draw_matches(filtered_reference_matches, filtered_target_matches, reference, target)
+        if True:
+            
+            # show the filtered matches
+            if vertical_image:
+                filtered_reference_matches = np.array(filtered_reference_matches)
+                filtered_target_matches = np.array(filtered_target_matches)
+                canvas = draw_matches(
+                np.column_stack((filtered_reference_matches[:,1], reference.shape[1] - filtered_reference_matches[:,0])),
+                np.column_stack((filtered_target_matches[:,1], target.shape[1] - filtered_target_matches[:,0])),
+                cv2.rotate(reference, cv2.ROTATE_90_COUNTERCLOCKWISE),
+                cv2.rotate(target, cv2.ROTATE_90_COUNTERCLOCKWISE))
+                
+            else:   
+                canvas = draw_matches(np.array(filtered_reference_matches), np.array(filtered_target_matches), reference, target)
  
             cv2.namedWindow(f"{extractor} filtered matches", cv2.WINDOW_NORMAL)
             cv2.resizeWindow(f"{extractor} filtered matches", 800, 600)
             cv2.imshow(f"{extractor} filtered matches", canvas)
+            
+            if print_images:
+                cv2.imwrite(f"report/assets/{extractor} filtered matches.png", canvas)
 
             cv2.waitKey(0)
             cv2.destroyAllWindows()
         
-        # for feat_idx, reference_2D_feature_point in enumerate(reference_2D_feature_points):
-        #     feature_to_match_dist = cdist(np.array([reference_2D_feature_point]), reference_2D_matches)
-        #     match_to_feature_dist = cdist(reference_2D_matches, np.array([reference_2D_feature_point]))
-
-        #     match_idx = np.argmin(reference_2D_feature_point_distances, axis=1)[0]
-            
-        #     logger.info(reference_2D_feature_point_distances.shape)
-        #     logger.info(match_idx)
-
-        #     if(reference_2D_feature_point_distances[:, match_idx] < 100): 
-        #         filtered_indexes.append([match_idx, feat_idx])
-        #         filtered_reference_matches.append(reference_2D_matches[match_idx, :])
-        #         filtered_target_matches.append(target_2D_matches[match_idx, :])
-        #         filtered_target_3D_matches.append(pc_points[reference_visibility[feat_idx]['index']])
-
-        #         target_2D_matches = np.delete(target_2D_matches, match_idx, axis=0)
-        #         reference_2D_matches = np.delete(reference_2D_matches, match_idx, axis=0)
-
-        #     logger.info(reference_2D_matches.shape)
-            
-
-           
-        # for       matches['reference_matches']
-
-        # for match_idx, feat_idx in enumerate(indexes.tolist()):
-        #     # since the 2D-2D matches to features on the reference images may be not even close we filter them base on the euclidean norm
-        #     # this is useful even when using the solvePnP with RANSAC
-        #     if (reference_2D_feature_points_to_extractor_matches_distance[match_idx, feat_idx] < 100):
-        #         filtered_indexes.append([match_idx, feat_idx])
-        #         filtered_reference_matches.append(
-        #             matches['reference_matches'][match_idx, :])
-        #         filtered_target_matches.append(
-        #             matches['target_matches'][match_idx, :])
-        #         filtered_target_3D_matches.append(
-        #             pc_points[reference_visibility[feat_idx]['index']])
-            
-        if False:
-            extractor_filtered_canvas = draw_matches(
-                filtered_reference_matches, filtered_target_matches, reference, target)
-            cv2.namedWindow("extractor filtered matches", cv2.WINDOW_NORMAL)
-            cv2.resizeWindow("extractor filtered matches", 800, 600)
-            cv2.imshow("extractor filtered matches", extractor_filtered_canvas)
-
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+       
 
         if True:
             # shows reference matches grouped by feature point
+            #of the already filtered matches, show how close they are to the selected vis. map feature point 
 
             bg = view_2D_matches(reference_2D_feature_points, 'Grouped matches',
                                  bg_image=reference, show=False).copy()
@@ -237,9 +234,11 @@ if __name__ == '__main__':
                 )
 
             cv2.namedWindow(f'{extractor} grouped matches', cv2.WINDOW_KEEPRATIO)
-            cv2.imwrite('report/assets/RDD_filtered_matches.jpg',bg)
             cv2.imshow(f'{extractor} grouped matches', bg)
             cv2.resizeWindow(f'{extractor} grouped matches', img_w // 2, img_h // 2)
+            if print_images:
+                cv2.imwrite(f'report/assets/{extractor} distance to closest ref match.jpg',bg)
+                
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
@@ -280,6 +279,7 @@ if __name__ == '__main__':
         target_T_estimated_noRANSAC[:3, 3] = target_t_estimated_noRANSAC.flatten()
 
 
+        #take the filtered point of the 3D model and project it using matrix found by solve PnP
         target_estimated_reproj, _ = cv2.projectPoints(
             filtered_target_3D_matches, target_rvec_estimated, target_t_estimated, cameraMatrix=reference_K, distCoeffs=dist_coeffs)
         target_estimated_reproj = target_estimated_reproj.squeeze()
@@ -290,7 +290,7 @@ if __name__ == '__main__':
         
         # print([matches['target_matches'].shape, target_estimated_reproj.shape])
         
-        if True:
+        if False and target_2D_feature_points is not None:
             # Compute and print errors
             chamfer_error = chamfer_distance(target_2D_feature_points, target_estimated_reproj)
             hausdorff_error = hausdorff_distance(target_2D_feature_points, target_estimated_reproj)
@@ -303,7 +303,7 @@ if __name__ == '__main__':
             logger.info(f'\nErrors ({extractor} w\RANSAC):\n    chamfer: {chamfer_error}\n    hausdorff: {hausdorff_error}\n    hausdorff (inliers only): {hausdorff_error_inliers}\n    symmetric partial RMSE: {symmetric_partial_rmse_error}\n    symmetric partial RMSE (inliers only): {symmetric_partial_rmse_error_inliers}\n    log_se3: {log_se3_error}\n    log_se3 norm: {np.linalg.norm(log_se3_error)}')
 
 
-        if True:
+        if False and target_2D_feature_points is not None:
             # Compute and print errors (no RANSAC pose)
             chamfer_error = chamfer_distance(target_2D_feature_points, target_estimated_reproj_noRANSAC)
             hausdorff_error = hausdorff_distance(target_2D_feature_points, target_estimated_reproj_noRANSAC)
@@ -317,6 +317,7 @@ if __name__ == '__main__':
         # print(target_T_estimated)
         # print(np.linalg.inv(target_T_estimated))
 
+        #view the reprojected filtered model against the 2D matches
         if True:
             logger.debug(filtered_target_matches.shape)
             logger.debug(target_estimated_reproj.shape)
@@ -341,13 +342,16 @@ if __name__ == '__main__':
                 )
                 target_original_idx += 1 
             
-            view_2D_matches(target_estimated_reproj, f'Target estimated reprojection ({extractor})', bg_image=img)
+            canvas=view_2D_matches(target_estimated_reproj, f'Target estimated reprojection ({extractor})', bg_image=img)
             
             cv2.waitKey(0)
+            if print_images:
+                cv2.imwrite(f"report/assets/{extractor} Target estimated reprojection.png", canvas)
             cv2.destroyAllWindows()
 
+        #view the reprojected filtered model against the 2D matches but discard outliers
         if True:
-            img = view_2D_matches(target_2D_matches_inliers, f'Target estimated reprojection ({extractor})', bg_image=target, show=False, color=(0,255,0))
+            img = view_2D_matches(target_2D_matches_inliers, f'Target estimated reprojection inliers ({extractor})', bg_image=target, show=False, color=(0,255,0))
             
             target_original_idx = 0
 
@@ -368,9 +372,11 @@ if __name__ == '__main__':
                 )
                 target_original_idx += 1 
             
-            view_2D_matches(target_estimated_reproj, f'Target estimated reprojection ({extractor})', bg_image=img)
+            canvas=view_2D_matches(target_estimated_reproj, f'Target estimated reprojection inliers ({extractor})', bg_image=img)
             
             cv2.waitKey(0)
+            if print_images:
+                cv2.imwrite(f"report/assets/{extractor} Target estimated reprojection inliers.png", canvas)
             cv2.destroyAllWindows()
 
         # Open3D geometries
