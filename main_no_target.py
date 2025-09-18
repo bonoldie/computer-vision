@@ -33,20 +33,20 @@ if __name__ == '__main__':
     pc_points = np.asarray(pc.points)
 
     # loads media
-    reference_image = '_SAM1005.JPG'
-    target_image = '_SAM1002.JPG'
+    reference_image = '_SAM1014.JPG'
+    target_image = '_DSC8045.jpg'
 
     reference_image_path = f'downloads/dante_dataset/dante_dataset/photos/{reference_image}'
-    target_image_path = f'downloads/dante_dataset/dante_dataset/photos/{target_image}'
+    target_image_path = f'dante external dataset/sony alpha/{target_image}'
 
     reference_K, reference_R, reference_t, dist_coeffs = parse_xmp_camera(
         f'downloads/dante_rework/extrinsics/{reference_image}.xmp')
-    target_K = reference_K
-    #target_K, target_R, target_t, _ = parse_xmp_camera(
-    #    f'downloads/dante_rework/extrinsics/{target_image}.xmp')
-    #target_T = np.identity(4)
-    #target_T[:3, :3] = np.array(target_R)
-    #target_T[:3, 3] = np.array(target_t).flatten()
+    
+    target_K, target_R, target_t, _ = parse_xmp_camera(
+        f'dante external dataset/sony alpha/intrinsics/{target_image}.xmp')
+    target_T = np.identity(4)
+    target_T[:3, :3] = np.array(target_R)
+    target_T[:3, 3] = np.array(target_t).flatten()
 
     reference = cv2.rotate(cv2.imread(reference_image_path), cv2.ROTATE_90_CLOCKWISE)
     target = cv2.rotate(cv2.imread(target_image_path), cv2.ROTATE_90_CLOCKWISE)
@@ -54,16 +54,6 @@ if __name__ == '__main__':
     reference_visibility = visibility_map[reference_image]
     reference_2D_feature_points = np.asarray([*map(lambda vis_entry: [vis_entry['w'], vis_entry['h']], reference_visibility)])
     reference_2D_feature_points = reference_2D_feature_points[:, ::-1]
-
-    #check if target visibility is available (target image may not be in dataset)
-    if target_image in visibility_map:
-        target_visibility = visibility_map[target_image]
-        target_2D_feature_points = np.asarray([*map(lambda vis_entry: [vis_entry['w'], vis_entry['h']], target_visibility)])
-        target_2D_feature_points = target_2D_feature_points[:, ::-1]
-    else:
-        target_2D_feature_points=None
-    
-    #target_3D_feature_points = np.asarray([*map(lambda vis_entry: pc_points[vis_entry['index'], :], target_visibility)])
 
 
     # Open3D section
@@ -80,18 +70,7 @@ if __name__ == '__main__':
     geometries = []
     geometries.append(pc)
 
-    # target_camera_axis = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.3)
-    # target_camera_axis.transform(np.linalg.inv(target_T))
-    # frustum_target, _ = create_camera_frustum(camera_intrinsics,  np.linalg.inv(target_T), reference, color=[0, 1, 0])
-
-    # dante_scene_widget.scene.add_geometry("Dante point cloud", pc, rendering.MaterialRecord())
-    # dante_scene_widget.scene.add_geometry("target camera axis", target_camera_axis, rendering.MaterialRecord())
-    # dante_scene_widget.scene.add_geometry("target camera frustum", frustum_target, rendering.MaterialRecord())
-
-    # geometries.append(target_camera_axis)
-    # geometries.append(frustum_target)
-
-    if False:
+    if True:
         view_2D_matches(reference_2D_feature_points, 'test',
                         bg_image=reference)
 
@@ -103,7 +82,7 @@ if __name__ == '__main__':
     extraction_matching_result = dict()
     extraction_matching_result['RDD'] = evaluateRDD(reference, target)
     extraction_matching_result['LiftFeat'] = evaluateLiftFeat(reference, target)
-    extraction_matching_result['Mast3r'] = evaluateMast3r(target_image_path, target_image_path)
+    #extraction_matching_result['Mast3r'] = evaluateMast3r(reference_image_path, target_image_path)
 
     # 2D-2D matches to 2D-3D matches
 
@@ -135,7 +114,7 @@ if __name__ == '__main__':
 
             cv2.waitKey(0)
             if print_images:
-                cv2.imwrite(f"report/assets/{extractor} matches.png", canvas)
+                cv2.imwrite(f"report/assets/{extractor} matches.jpg", canvas, [cv2.IMWRITE_JPEG_QUALITY, 70])
             cv2.destroyAllWindows()
 
         # reference_2D_feature_points_to_extractor_matches_distance = cdist(
@@ -201,7 +180,7 @@ if __name__ == '__main__':
             cv2.imshow(f"{extractor} filtered matches", canvas)
             
             if print_images:
-                cv2.imwrite(f"report/assets/{extractor} filtered matches.png", canvas)
+                cv2.imwrite(f"report/assets/{extractor} filtered matches.jpg", canvas,[cv2.IMWRITE_JPEG_QUALITY, 70])
 
             cv2.waitKey(0)
             cv2.destroyAllWindows()
@@ -238,7 +217,7 @@ if __name__ == '__main__':
             cv2.imshow(f'{extractor} grouped matches', bg)
             cv2.resizeWindow(f'{extractor} grouped matches', img_w // 2, img_h // 2)
             if print_images:
-                cv2.imwrite(f'report/assets/{extractor} distance to closest ref match.jpg',bg)
+                cv2.imwrite(f'report/assets/{extractor} distance to closest ref match.jpg',bg,[cv2.IMWRITE_JPEG_QUALITY, 70])
                 
             cv2.waitKey(0)
             cv2.destroyAllWindows()
@@ -333,8 +312,8 @@ if __name__ == '__main__':
             img_noRANSAC = view_2D_matches(target_estimated_reproj_noRANSAC_WHOLEMODEL, f'Target estimated reprojection, whole model({extractor})', bg_image=target, show=False, color=(0,255,0))
             img_RANSAC = view_2D_matches(target_estimated_reproj_WHOLEMODEL, f'Target estimated reprojection, whole model({extractor})', bg_image=target, show=False, color=(0,255,0))
 
-            cv2.imwrite(f'report/original image/{extractor} target reprojection whole model NORANSAC.jpg', img_noRANSAC)
-            cv2.imwrite(f'report/original image/{extractor} target reprojection whole model RANSAC.jpg', img_RANSAC)
+            cv2.imwrite(f'report/assets/{extractor} target reprojection whole model NORANSAC.jpg', img_noRANSAC,[cv2.IMWRITE_JPEG_QUALITY, 70])
+            cv2.imwrite(f'report/assets/{extractor} target reprojection whole model RANSAC.jpg', img_RANSAC,[cv2.IMWRITE_JPEG_QUALITY, 70])
 
         #view the reprojected filtered model against the 2D matches
         if True:
@@ -365,7 +344,7 @@ if __name__ == '__main__':
             
             cv2.waitKey(0)
             if print_images:
-                cv2.imwrite(f"report/assets/{extractor} Target estimated reprojection.png", canvas)
+                cv2.imwrite(f"report/assets/{extractor} Target estimated reprojection.jpg", canvas,[cv2.IMWRITE_JPEG_QUALITY, 70])
             cv2.destroyAllWindows()
 
         #view the reprojected filtered model against the 2D matches but discard outliers
@@ -395,7 +374,7 @@ if __name__ == '__main__':
             
             cv2.waitKey(0)
             if print_images:
-                cv2.imwrite(f"report/assets/{extractor} Target estimated reprojection inliers.png", canvas)
+                cv2.imwrite(f"report/assets/{extractor} Target estimated reprojection inliers.jpg", canvas,[cv2.IMWRITE_JPEG_QUALITY, 70])
             cv2.destroyAllWindows()
 
         # Open3D geometries

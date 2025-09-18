@@ -102,7 +102,7 @@ if __name__ == '__main__':
     extraction_matching_result = dict()
     extraction_matching_result['RDD'] = evaluateRDD(reference, target)
     extraction_matching_result['LiftFeat'] = evaluateLiftFeat(reference, target)
-    extraction_matching_result['Mast3r'] = evaluateMast3r(target_image_path, target_image_path)
+    #extraction_matching_result['Mast3r'] = evaluateMast3r(reference, target)
 
     # 2D-2D matches to 2D-3D matches
 
@@ -134,7 +134,7 @@ if __name__ == '__main__':
 
             cv2.waitKey(0)
             if print_images:
-                cv2.imwrite(f"report/assets/{extractor} matches.png", canvas)
+                cv2.imwrite(f"report/assets/{extractor} matches.jpg", canvas,[cv2.IMWRITE_JPEG_QUALITY, 70])
             cv2.destroyAllWindows()
 
         # reference_2D_feature_points_to_extractor_matches_distance = cdist(
@@ -200,7 +200,7 @@ if __name__ == '__main__':
             cv2.imshow(f"{extractor} filtered matches", canvas)
             
             if print_images:
-                cv2.imwrite(f"report/assets/{extractor} filtered matches.png", canvas)
+                cv2.imwrite(f"report/assets/{extractor} filtered matches.jpg", canvas,[cv2.IMWRITE_JPEG_QUALITY, 70])
 
             cv2.waitKey(0)
             cv2.destroyAllWindows()
@@ -237,7 +237,7 @@ if __name__ == '__main__':
             cv2.imshow(f'{extractor} grouped matches', bg)
             cv2.resizeWindow(f'{extractor} grouped matches', img_w // 2, img_h // 2)
             if print_images:
-                cv2.imwrite(f'report/assets/{extractor} distance to closest ref match.jpg',bg)
+                cv2.imwrite(f'report/assets/{extractor} distance to closest ref match.jpg',bg,[cv2.IMWRITE_JPEG_QUALITY, 70])
                 
             cv2.waitKey(0)
             cv2.destroyAllWindows()
@@ -288,9 +288,24 @@ if __name__ == '__main__':
             filtered_target_3D_matches, target_rvec_estimated_noRANSAC, target_t_estimated_noRANSAC, cameraMatrix=reference_K, distCoeffs=dist_coeffs)
         target_estimated_reproj_noRANSAC = target_estimated_reproj_noRANSAC.squeeze()
         
+        target_estimated_reproj_WHOLEMODEL, _ = cv2.projectPoints(
+            pc_points, target_rvec_estimated, target_t_estimated, cameraMatrix=reference_K, distCoeffs=dist_coeffs)
+        target_estimated_reproj_WHOLEMODEL = target_estimated_reproj_WHOLEMODEL.squeeze()
+
+        target_estimated_reproj_noRANSAC_WHOLEMODEL, _ = cv2.projectPoints(
+            pc_points, target_rvec_estimated_noRANSAC, target_t_estimated_noRANSAC, cameraMatrix=reference_K, distCoeffs=dist_coeffs)
+        target_estimated_reproj_noRANSAC_WHOLEMODEL = target_estimated_reproj_noRANSAC_WHOLEMODEL.squeeze()
+        
+        if True: 
+            img_noRANSAC = view_2D_matches(target_estimated_reproj_noRANSAC_WHOLEMODEL, f'Target estimated reprojection, whole model({extractor})', bg_image=target, show=False, color=(0,255,0))
+            img_RANSAC = view_2D_matches(target_estimated_reproj_WHOLEMODEL, f'Target estimated reprojection, whole model({extractor})', bg_image=target, show=False, color=(0,255,0))
+
+            cv2.imwrite(f'report/assets/{extractor} target reprojection whole model NORANSAC.jpg', img_noRANSAC,[cv2.IMWRITE_JPEG_QUALITY, 70])
+            cv2.imwrite(f'report/assets/{extractor} target reprojection whole model RANSAC.jpg', img_RANSAC,[cv2.IMWRITE_JPEG_QUALITY, 70])
+        
         # print([matches['target_matches'].shape, target_estimated_reproj.shape])
         
-        if False and target_2D_feature_points is not None:
+        if True and target_2D_feature_points is not None:
             # Compute and print errors
             chamfer_error = chamfer_distance(target_2D_feature_points, target_estimated_reproj)
             hausdorff_error = hausdorff_distance(target_2D_feature_points, target_estimated_reproj)
@@ -303,7 +318,7 @@ if __name__ == '__main__':
             logger.info(f'\nErrors ({extractor} w\RANSAC):\n    chamfer: {chamfer_error}\n    hausdorff: {hausdorff_error}\n    hausdorff (inliers only): {hausdorff_error_inliers}\n    symmetric partial RMSE: {symmetric_partial_rmse_error}\n    symmetric partial RMSE (inliers only): {symmetric_partial_rmse_error_inliers}\n    log_se3: {log_se3_error}\n    log_se3 norm: {np.linalg.norm(log_se3_error)}')
 
 
-        if False and target_2D_feature_points is not None:
+        if True and target_2D_feature_points is not None:
             # Compute and print errors (no RANSAC pose)
             chamfer_error = chamfer_distance(target_2D_feature_points, target_estimated_reproj_noRANSAC)
             hausdorff_error = hausdorff_distance(target_2D_feature_points, target_estimated_reproj_noRANSAC)
@@ -346,7 +361,7 @@ if __name__ == '__main__':
             
             cv2.waitKey(0)
             if print_images:
-                cv2.imwrite(f"report/assets/{extractor} Target estimated reprojection.png", canvas)
+                cv2.imwrite(f"report/assets/{extractor} Target estimated reprojection.jpg", canvas,[cv2.IMWRITE_JPEG_QUALITY, 70])
             cv2.destroyAllWindows()
 
         #view the reprojected filtered model against the 2D matches but discard outliers

@@ -49,8 +49,9 @@ def setupRDD():
 
 def setupLiftFeat():
     logger.info('Setting up LiftFeat...')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     liftfeat = LiftFeat(detect_threshold=0.05)
-    liftfeat.cpu() 
+    liftfeat = liftfeat.to(device)
     return liftfeat
 
 def setupMaste3r():
@@ -62,7 +63,7 @@ def setupRoMa():
     logger.info('Setting up RoMa(RoMa outdoor)...')
     return roma_outdoor(device='cpu', coarse_res=int(700), upsample_res=int(840))
 
-def evaluateRDD(reference, target, model=None, cache=True):
+def evaluateRDD(reference, target, model=None, cache=False):
 
     if type(reference) is str:
         reference =  cv2.imread(reference)
@@ -73,7 +74,6 @@ def evaluateRDD(reference, target, model=None, cache=True):
     if cache:
         logger.info('Checking caches...')
         cache_path = os.path.join('.caches', 'RDD', hashlib.sha256(reference.tobytes()).hexdigest() + hashlib.sha256(target.tobytes()).hexdigest() + '.pkl')
-
         if(Path(cache_path).exists()):
             logger.success('Returning matches from cache')
             with open(cache_path, "rb") as cached_file:
@@ -105,7 +105,7 @@ def evaluateRDD(reference, target, model=None, cache=True):
 
     return res
 
-def evaluateLiftFeat(reference, target, scale_factor=1/3, model=None, cache=True):
+def evaluateLiftFeat(reference, target, scale_factor=1/3, model=None, cache=False):
     
     if type(reference) is str:
         reference =  cv2.imread(reference)
@@ -157,7 +157,7 @@ def evaluateLiftFeat(reference, target, scale_factor=1/3, model=None, cache=True
 
     return res
 
-def evaluateMast3r(reference, target, model=None, cache=True):
+def evaluateMast3r(reference, target, model=None, cache=False):
     reference_path = reference
     target_path = target
 
